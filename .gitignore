@@ -1,0 +1,11 @@
+node_modules/
+dist/
+dev-dist/
+.gradle/
+*.iml
+local.properties
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
