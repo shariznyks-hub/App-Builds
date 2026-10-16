@@ -1,17 +1,49 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { MCQOption } from '../types';
+import { MCQOption, MCQQuestionItem, EvaluationSummary } from '../types';
+import { parseMCQInput, SAMPLE_MCQ_INPUT } from '../utils/mcqParser';
 
 const STORAGE_KEY_ANSWERS = 'mcq_answer_pad_answers_v1';
 const STORAGE_KEY_CONFIG = 'mcq_answer_pad_config_v1';
+const STORAGE_KEY_QUESTIONS = 'mcq_answer_pad_questions_v1';
+const STORAGE_KEY_SUBMITTED = 'mcq_answer_pad_submitted_v1';
 
 export function useMCQState() {
-  // Load initial settings
+  // Questions list (parsed from [Q1] ... [/Q1] format)
+  const [questions, setQuestions] = useState<MCQQuestionItem[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_QUESTIONS);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch {
+      // ignore
+    }
+    // Default to sample questions out of the box
+    return parseMCQInput(SAMPLE_MCQ_INPUT);
+  });
+
+  // Submission / Evaluation status
+  const [isSubmitted, setIsSubmitted] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_SUBMITTED);
+      return saved === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  // Start question number
   const [startQuestion, setStartQuestion] = useState<number>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_CONFIG);
       if (saved) {
         const parsed = JSON.parse(saved);
-        return typeof parsed.startQuestion === 'number' && parsed.startQuestion >= 1 ? parsed.startQuestion : 1;
+        if (typeof parsed.startQuestion === 'number' && parsed.startQuestion >= 1) {
+          return parsed.startQuestion;
+        }
       }
     } catch {
       // ignore
@@ -19,19 +51,23 @@ export function useMCQState() {
     return 1;
   });
 
+  // Total questions count
   const [totalQuestions, setTotalQuestions] = useState<number>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_CONFIG);
       if (saved) {
         const parsed = JSON.parse(saved);
-        return typeof parsed.totalQuestions === 'number' && parsed.totalQuestions >= 1 ? Math.min(parsed.totalQuestions, 500) : 500;
+        if (typeof parsed.totalQuestions === 'number' && parsed.totalQuestions >= 1) {
+          return Math.min(parsed.totalQuestions, 500);
+        }
       }
     } catch {
       // ignore
     }
-    return 500;
+    return 3;
   });
 
+  // Current active question
   const [currentQuestion, setCurrentQuestion] = useState<number>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_CONFIG);
@@ -109,6 +145,24 @@ export function useMCQState() {
     }
   }, [answers]);
 
+  // Persist questions to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_QUESTIONS, JSON.stringify(questions));
+    } catch {
+      // ignore
+    }
+  }, [questions]);
+
+  // Persist isSubmitted to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_SUBMITTED, String(isSubmitted));
+    } catch {
+      // ignore
+    }
+  }, [isSubmitted]);
+
   // Haptic feedback for tactile tablet feeling
   const triggerHaptic = useCallback(() => {
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
@@ -123,6 +177,9 @@ export function useMCQState() {
   // Answer current question and advance
   const answerCurrent = useCallback(
     (option: MCQOption) => {
+      // If already submitted, do not allow changing answers
+      if (isSubmitted) return;
+
       triggerHaptic();
       setAnswers((prev) => ({
         ...prev,
@@ -134,13 +191,12 @@ export function useMCQState() {
         setCurrentQuestion((prev) => prev + 1);
       }
     },
-    [currentQuestion, endQuestion, triggerHaptic]
+    [currentQuestion, endQuestion, isSubmitted, triggerHaptic]
   );
 
-  // Skip current question (leaves blank, does NOT save skip as answer) and advance
+  // Skip current question (leaves blank) and advance
   const skipCurrent = useCallback(() => {
     triggerHaptic();
-    // Do not set any answer, question remains blank
     if (currentQuestion < endQuestion) {
       setCurrentQuestion((prev) => prev + 1);
     }
@@ -174,22 +230,24 @@ export function useMCQState() {
 
   // Clear answer for current question
   const clearCurrentAnswer = useCallback(() => {
+    if (isSubmitted) return;
     triggerHaptic();
     setAnswers((prev) => {
       const updated = { ...prev };
       delete updated[currentQuestion];
       return updated;
     });
-  }, [currentQuestion, triggerHaptic]);
+  }, [currentQuestion, isSubmitted, triggerHaptic]);
 
   // Clear all answers
   const clearAllAnswers = useCallback(() => {
     triggerHaptic();
     setAnswers({});
     setCurrentQuestion(startQuestion);
+    setIsSubmitted(false);
   }, [startQuestion, triggerHaptic]);
 
-  // Update question range
+  // Update question range manually
   const updateRange = useCallback(
     (newStart: number, newTotal: number, _newOptions?: number) => {
       const validStart = Math.max(1, Math.min(newStart, 1000));
@@ -198,11 +256,61 @@ export function useMCQState() {
       setTotalQuestions(validTotal);
       setOptionsCount(4);
       setCurrentQuestion(validStart);
+      setIsSubmitted(false);
     },
     []
   );
 
-  // Statistics
+  // Load imported questions
+  const loadQuestions = useCallback((rawText: string): boolean => {
+    const parsed = parseMCQInput(rawText);
+    if (parsed.length === 0) {
+      return false;
+    }
+    const start = parsed[0]?.questionNumber || 1;
+    const total = parsed.length;
+
+    setQuestions(parsed);
+    setStartQuestion(start);
+    setTotalQuestions(total);
+    setCurrentQuestion(start);
+    setAnswers({});
+    setIsSubmitted(false);
+    return true;
+  }, []);
+
+  // Load sample questions
+  const loadSampleQuestions = useCallback(() => {
+    loadQuestions(SAMPLE_MCQ_INPUT);
+  }, [loadQuestions]);
+
+  // Submit test for evaluation
+  const submitTest = useCallback(() => {
+    triggerHaptic();
+    setIsSubmitted(true);
+    setCurrentQuestion(startQuestion);
+  }, [startQuestion, triggerHaptic]);
+
+  // Retake test (clears answers and exits evaluation mode)
+  const retakeTest = useCallback(() => {
+    triggerHaptic();
+    setAnswers({});
+    setIsSubmitted(false);
+    setCurrentQuestion(startQuestion);
+  }, [startQuestion, triggerHaptic]);
+
+  // Resume / edit attempt (keeps answers but exits evaluation mode)
+  const resumeAttempt = useCallback(() => {
+    triggerHaptic();
+    setIsSubmitted(false);
+  }, [triggerHaptic]);
+
+  // Find current question object if available
+  const currentQuestionItem = useMemo(() => {
+    return questions.find((q) => q.questionNumber === currentQuestion);
+  }, [questions, currentQuestion]);
+
+  // Statistics for progress bar & counters
   const stats = useMemo(() => {
     let answeredCount = 0;
     const unansweredList: number[] = [];
@@ -218,7 +326,10 @@ export function useMCQState() {
 
     const unansweredCount = unansweredList.length;
     const currentRaw = answers[currentQuestion];
-    const validCurrentAnswer = currentRaw === 'A' || currentRaw === 'B' || currentRaw === 'C' || currentRaw === 'D' ? currentRaw : undefined;
+    const validCurrentAnswer =
+      currentRaw === 'A' || currentRaw === 'B' || currentRaw === 'C' || currentRaw === 'D'
+        ? currentRaw
+        : undefined;
 
     return {
       answeredCount,
@@ -231,6 +342,40 @@ export function useMCQState() {
     };
   }, [answers, currentQuestion, startQuestion, endQuestion]);
 
+  // Comprehensive Evaluation Summary
+  const evaluation = useMemo<EvaluationSummary>(() => {
+    let correct = 0;
+    let incorrect = 0;
+    let unattempted = 0;
+
+    for (let q = startQuestion; q <= endQuestion; q++) {
+      const userAns = answers[q];
+      const qItem = questions.find((item) => item.questionNumber === q);
+      const correctAns = qItem ? qItem.correctAnswer : undefined;
+
+      if (!userAns) {
+        unattempted++;
+      } else if (correctAns && userAns === correctAns) {
+        correct++;
+      } else {
+        incorrect++;
+      }
+    }
+
+    const total = totalQuestions > 0 ? totalQuestions : 1;
+    const score = correct;
+    const percentage = Math.round((correct / total) * 100);
+
+    return {
+      total,
+      correct,
+      incorrect,
+      unattempted,
+      score,
+      percentage,
+    };
+  }, [answers, questions, startQuestion, endQuestion, totalQuestions]);
+
   return {
     startQuestion,
     totalQuestions,
@@ -238,7 +383,11 @@ export function useMCQState() {
     currentQuestion,
     optionsCount,
     answers,
+    questions,
+    currentQuestionItem,
+    isSubmitted,
     stats,
+    evaluation,
     answerCurrent,
     skipCurrent,
     goToNext,
@@ -248,5 +397,10 @@ export function useMCQState() {
     clearAllAnswers,
     updateRange,
     setOptionsCount,
+    loadQuestions,
+    loadSampleQuestions,
+    submitTest,
+    retakeTest,
+    resumeAttempt,
   };
 }

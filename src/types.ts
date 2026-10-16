@@ -4,15 +4,35 @@
 
 export type MCQOption = 'A' | 'B' | 'C' | 'D';
 
-export interface MCQState {
-  startQuestion: number;
-  totalQuestions: number;
-  currentQuestion: number;
-  // Map of questionNumber -> selected option (or undefined if unanswered/skipped)
-  answers: Record<number, MCQOption>;
-  optionsCount: 4 | 5; // Support 4 or 5 options
-  soundEnabled: boolean;
-  hapticEnabled: boolean;
+export interface MCQQuestionItem {
+  id: number;
+  questionNumber: number;
+  questionText: string;
+  options: {
+    A: string;
+    B: string;
+    C: string;
+    D: string;
+  };
+  correctAnswer: MCQOption;
+  explanation?: string;
 }
 
-export type ActiveModal = 'none' | 'setup' | 'unanswered' | 'export' | 'clearConfirm' | 'androidInstall';
+export interface EvaluationSummary {
+  total: number;
+  correct: number;
+  incorrect: number;
+  unattempted: number;
+  score: number;
+  percentage: number;
+}
+
+export type ActiveModal =
+  | 'none'
+  | 'setup'
+  | 'unanswered'
+  | 'export'
+  | 'clearConfirm'
+  | 'androidInstall'
+  | 'importQuestions'
+  | 'submitConfirm';

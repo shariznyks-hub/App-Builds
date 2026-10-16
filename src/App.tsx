@@ -9,6 +9,8 @@ import { ExportModal } from './components/ExportModal';
 import { SetupModal } from './components/SetupModal';
 import { ClearConfirmModal } from './components/ClearConfirmModal';
 import { AndroidInstallModal } from './components/AndroidInstallModal';
+import { ImportQuestionsModal } from './components/ImportQuestionsModal';
+import { SubmitConfirmModal } from './components/SubmitConfirmModal';
 import { ActiveModal } from './types';
 
 export default function App() {
@@ -17,9 +19,11 @@ export default function App() {
     totalQuestions,
     endQuestion,
     currentQuestion,
-    optionsCount,
     answers,
+    currentQuestionItem,
+    isSubmitted,
     stats,
+    evaluation,
     answerCurrent,
     skipCurrent,
     goToNext,
@@ -28,6 +32,9 @@ export default function App() {
     clearCurrentAnswer,
     clearAllAnswers,
     updateRange,
+    loadQuestions,
+    submitTest,
+    retakeTest,
   } = useMCQState();
 
   const { isInstallable, install } = usePWAInstall();
@@ -35,7 +42,7 @@ export default function App() {
 
   return (
     <div className="h-screen w-screen flex flex-col bg-slate-950 text-slate-100 overflow-hidden font-sans">
-      {/* Header with Title, Status & Counters */}
+      {/* Header with Title, Quick Actions, Counters & Post-Submission Evaluation Banner */}
       <Header
         currentQuestion={currentQuestion}
         startQuestion={startQuestion}
@@ -44,16 +51,22 @@ export default function App() {
         answeredCount={stats.answeredCount}
         unansweredCount={stats.unansweredCount}
         currentAnswer={stats.currentAnswer}
+        isSubmitted={isSubmitted}
+        evaluation={evaluation}
         onOpenModal={setActiveModal}
+        onSubmitTest={() => setActiveModal('submitConfirm')}
+        onRetakeTest={retakeTest}
         isPWAInstallable={isInstallable}
         onInstallPWA={install}
       />
 
-      {/* Primary MCQ Buttons & Skip (Dominates vertical height) */}
+      {/* Primary MCQ Area (Question Text, Options A-D, Evaluation Highlighting & Explanations) */}
       <main className="flex-1 flex flex-col justify-center min-h-0 overflow-hidden">
         <AnswerPad
-          optionsCount={optionsCount}
+          currentQuestion={currentQuestion}
+          questionItem={currentQuestionItem}
           currentAnswer={stats.currentAnswer}
+          isSubmitted={isSubmitted}
           onSelectOption={answerCurrent}
           onSkip={skipCurrent}
           onPrevious={goToPrevious}
@@ -61,12 +74,13 @@ export default function App() {
         />
       </main>
 
-      {/* Bottom Navigation (Prev, Jump, Clear Ans, Next) */}
+      {/* Bottom Navigation (Prev, Jump, Clear Ans / Review, Next) */}
       <NavigationControls
         currentQuestion={currentQuestion}
         startQuestion={startQuestion}
         endQuestion={endQuestion}
         hasAnswer={stats.hasAnswer}
+        isSubmitted={isSubmitted}
         onPrevious={goToPrevious}
         onNext={goToNext}
         onClearCurrentAnswer={clearCurrentAnswer}
@@ -95,7 +109,6 @@ export default function App() {
         <SetupModal
           currentStart={startQuestion}
           currentTotal={totalQuestions}
-          currentOptionsCount={optionsCount}
           onSave={updateRange}
           onClose={() => setActiveModal('none')}
         />
@@ -113,6 +126,23 @@ export default function App() {
         <AndroidInstallModal
           isPWAInstallable={isInstallable}
           onInstallPWA={install}
+          onClose={() => setActiveModal('none')}
+        />
+      )}
+
+      {activeModal === 'importQuestions' && (
+        <ImportQuestionsModal
+          onLoadQuestions={loadQuestions}
+          onClose={() => setActiveModal('none')}
+        />
+      )}
+
+      {activeModal === 'submitConfirm' && (
+        <SubmitConfirmModal
+          totalQuestions={totalQuestions}
+          answeredCount={stats.answeredCount}
+          unansweredCount={stats.unansweredCount}
+          onConfirm={submitTest}
           onClose={() => setActiveModal('none')}
         />
       )}

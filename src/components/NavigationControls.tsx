@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, XCircle, Search } from 'lucide-react';
+import { ChevronLeft, ChevronRight, XCircle, Search, HelpCircle } from 'lucide-react';
 
 interface NavigationControlsProps {
   currentQuestion: number;
   startQuestion: number;
   endQuestion: number;
   hasAnswer: boolean;
+  isSubmitted?: boolean;
   onPrevious: () => void;
   onNext: () => void;
   onClearCurrentAnswer: () => void;
@@ -17,6 +18,7 @@ export const NavigationControls: React.FC<NavigationControlsProps> = ({
   startQuestion,
   endQuestion,
   hasAnswer,
+  isSubmitted = false,
   onPrevious,
   onNext,
   onClearCurrentAnswer,
@@ -93,30 +95,37 @@ export const NavigationControls: React.FC<NavigationControlsProps> = ({
           <button
             id="jump-toggle-btn"
             onClick={() => setShowJumpInput((v) => !v)}
-            className="h-13 sm:h-14 px-3 rounded-xl bg-slate-800 hover:bg-slate-750 border border-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition active:scale-[0.98]"
+            className="h-13 sm:h-14 px-3 sm:px-4 rounded-xl bg-slate-800 hover:bg-slate-750 border border-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition active:scale-[0.98]"
             title="Jump to question number"
             aria-label="Jump to question number"
           >
             <Search className="w-5 h-5" />
           </button>
 
-          {/* Clear Current Answer */}
-          <button
-            id="clear-current-btn"
-            onClick={onClearCurrentAnswer}
-            disabled={!hasAnswer}
-            className={`flex-1 h-13 sm:h-14 rounded-xl flex items-center justify-center gap-1.5 px-3 font-semibold text-xs sm:text-sm border transition-all active:scale-[0.98] ${
-              hasAnswer
-                ? 'bg-rose-950/30 hover:bg-rose-950/60 border-rose-800/60 text-rose-300'
-                : 'bg-slate-900/50 border-slate-800 text-slate-600 cursor-not-allowed'
-            }`}
-            title="Clear the saved answer for this question"
-            aria-label="Clear current answer"
-            style={{ touchAction: 'manipulation' }}
-          >
-            <XCircle className="w-4 h-4 sm:w-5 sm:h-5 text-rose-400" />
-            <span className="truncate">Clear Ans</span>
-          </button>
+          {/* Clear Current Answer (Attempt Mode) OR Current Q status (Evaluation Mode) */}
+          {!isSubmitted ? (
+            <button
+              id="clear-current-btn"
+              onClick={onClearCurrentAnswer}
+              disabled={!hasAnswer}
+              className={`flex-1 h-13 sm:h-14 rounded-xl flex items-center justify-center gap-1.5 px-3 font-semibold text-xs sm:text-sm border transition-all active:scale-[0.98] ${
+                hasAnswer
+                  ? 'bg-rose-950/30 hover:bg-rose-950/60 border-rose-800/60 text-rose-300'
+                  : 'bg-slate-900/50 border-slate-800 text-slate-600 cursor-not-allowed'
+              }`}
+              title="Clear the saved answer for this question"
+              aria-label="Clear current answer"
+              style={{ touchAction: 'manipulation' }}
+            >
+              <XCircle className="w-4 h-4 sm:w-5 sm:h-5 text-rose-400" />
+              <span className="truncate">Clear Ans</span>
+            </button>
+          ) : (
+            <div className="flex-1 h-13 sm:h-14 rounded-xl bg-slate-800/60 border border-slate-750 flex items-center justify-center gap-1 px-3 text-xs sm:text-sm text-slate-300 font-semibold">
+              <HelpCircle className="w-4 h-4 text-emerald-400" />
+              <span>Review Q {currentQuestion}</span>
+            </div>
+          )}
 
           {/* Next Button */}
           <button
