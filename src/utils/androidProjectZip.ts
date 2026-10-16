@@ -370,23 +370,31 @@ class MCQViewModel(application: Application) : AndroidViewModel(application) {
   github?.file(
     'build-apk.yml',
     `name: Build Android APK
-on: [push, workflow_dispatch]
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
 jobs:
   build:
+    name: Build Android Debug APK
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - name: Checkout repository
+        uses: actions/checkout@v5
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
         with:
           java-version: '17'
           distribution: 'temurin'
-      - uses: gradle/actions/setup-gradle@v4
-      - run: chmod +x gradlew || true
-      - run: ./gradlew assembleDebug
-      - uses: actions/upload-artifact@v4
+      - name: Make gradlew executable
+        run: chmod +x gradlew || true
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug --stacktrace
+      - name: Upload Debug APK Artifact
+        uses: actions/upload-artifact@v4
         with:
-          name: MCQ-Answer-Pad.apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: MCQ-Answer-Pad-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
 `
   );
 

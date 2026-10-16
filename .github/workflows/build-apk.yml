@@ -2,9 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: [ "main", "master" ]
-  pull_request:
-    branches: [ "main", "master" ]
+    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
@@ -14,24 +12,24 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Make android/gradlew executable
+      - name: Make Gradle Wrapper executable
         run: chmod +x android/gradlew
 
-      - name: Build Debug APK
+      - name: Build Debug APK with Gradle Wrapper
         working-directory: android
         run: ./gradlew assembleDebug --stacktrace
 
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: MCQ-Answer-Pad-debug.apk
+          name: MCQ-Answer-Pad-debug-apk
           path: android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
