@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mcq.answerpad.MCQViewModel
@@ -83,7 +84,7 @@ fun MCQScreen(viewModel: MCQViewModel) {
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Row(
@@ -93,43 +94,52 @@ fun MCQScreen(viewModel: MCQViewModel) {
                     ) {
                         Text(
                             text = "Question ${state.currentQuestion} / ${state.endQuestion}",
-                            fontSize = 28.sp,
+                            modifier = Modifier.weight(1f, fill = false),
+                            fontSize = 22.sp,
                             fontWeight = FontWeight.ExtraBold,
-                            color = BlueAccent
+                            color = BlueAccent,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
-                        
-                        // Current saved answer badge
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        // Current saved answer badge (stays on single line without word breaking)
                         if (!state.currentAnswer.isNullOrBlank()) {
                             Surface(
                                 color = EmeraldAccent.copy(alpha = 0.2f),
-                                shape = RoundedCornerShape(12.dp),
+                                shape = RoundedCornerShape(10.dp),
                                 border = androidx.compose.foundation.BorderStroke(1.5.dp, EmeraldAccent)
                             ) {
                                 Text(
                                     text = "Saved: ${state.currentAnswer}",
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp,
-                                    color = EmeraldAccent
+                                    fontSize = 14.sp,
+                                    color = EmeraldAccent,
+                                    maxLines = 1,
+                                    softWrap = false
                                 )
                             }
                         } else {
                             Surface(
                                 color = Slate800,
-                                shape = RoundedCornerShape(12.dp)
+                                shape = RoundedCornerShape(10.dp)
                             ) {
                                 Text(
                                     text = "Unanswered",
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
                                     fontWeight = FontWeight.Medium,
-                                    fontSize = 14.sp,
-                                    color = Slate400
+                                    fontSize = 13.sp,
+                                    color = Slate400,
+                                    maxLines = 1,
+                                    softWrap = false
                                 )
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -138,21 +148,27 @@ fun MCQScreen(viewModel: MCQViewModel) {
                     ) {
                         Text(
                             text = "Answered: ${state.answeredCount}",
+                            modifier = Modifier.weight(1f, fill = false),
                             color = EmeraldAccent,
                             fontWeight = FontWeight.SemiBold,
-                            fontSize = 16.sp
+                            fontSize = 14.sp,
+                            maxLines = 1,
+                            softWrap = false
                         )
+                        Spacer(modifier = Modifier.width(8.dp))
                         Button(
                             onClick = { viewModel.setUnansweredDialog(true) },
                             colors = ButtonDefaults.buttonColors(containerColor = Slate800),
-                            shape = RoundedCornerShape(12.dp),
-                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 5.dp)
                         ) {
                             Text(
                                 text = "Unanswered: ${state.unansweredCount}",
                                 color = AmberSkip,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 15.sp
+                                fontSize = 13.sp,
+                                maxLines = 1,
+                                softWrap = false
                             )
                         }
                     }
@@ -257,15 +273,16 @@ fun MCQScreen(viewModel: MCQViewModel) {
             // NAVIGATION BAR
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Button(
                     onClick = { viewModel.previousQuestion() },
                     enabled = state.currentQuestion > state.startQuestion,
                     modifier = Modifier
                         .weight(1f)
-                        .height(54.dp),
-                    shape = RoundedCornerShape(14.dp),
+                        .height(52.dp),
+                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
+                    shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Slate900,
                         contentColor = Slate100,
@@ -274,29 +291,53 @@ fun MCQScreen(viewModel: MCQViewModel) {
                     ),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Slate700)
                 ) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Prev", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        "Prev",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        softWrap = false
+                    )
                 }
 
                 Button(
                     onClick = { viewModel.clearCurrentAnswer() },
                     enabled = !state.currentAnswer.isNullOrBlank(),
                     modifier = Modifier
-                        .weight(1.2f)
-                        .height(54.dp),
-                    shape = RoundedCornerShape(14.dp),
+                        .weight(1.1f)
+                        .height(52.dp),
+                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
+                    shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = RoseClear.copy(alpha = 0.15f),
                         contentColor = RoseClear,
                         disabledContainerColor = Slate900.copy(alpha = 0.5f),
                         disabledContentColor = Slate700
                     ),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, if (!state.currentAnswer.isNullOrBlank()) RoseClear.copy(alpha = 0.4f) else Slate700)
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        if (!state.currentAnswer.isNullOrBlank()) RoseClear.copy(alpha = 0.4f) else Slate700
+                    )
                 ) {
-                    Icon(Icons.Default.Clear, contentDescription = null)
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Clear Ans", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Icon(
+                        Icons.Default.Clear,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(3.dp))
+                    Text(
+                        "Clear Ans",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        softWrap = false
+                    )
                 }
 
                 Button(
@@ -304,8 +345,9 @@ fun MCQScreen(viewModel: MCQViewModel) {
                     enabled = state.currentQuestion < state.endQuestion,
                     modifier = Modifier
                         .weight(1f)
-                        .height(54.dp),
-                    shape = RoundedCornerShape(14.dp),
+                        .height(52.dp),
+                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
+                    shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Slate900,
                         contentColor = Slate100,
@@ -314,9 +356,19 @@ fun MCQScreen(viewModel: MCQViewModel) {
                     ),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Slate700)
                 ) {
-                    Text("Next", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
+                    Text(
+                        "Next",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        softWrap = false
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
             }
         }

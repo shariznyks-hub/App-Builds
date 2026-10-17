@@ -1,0 +1,6 @@
+{
+  "summary": "Implementation plan for resolving mobile layout clipping and wrapping on real Android devices across native Jetpack Compose and Web/PWA.",
+  "updatedAt": "2026-10-16T18:03:30.530974272Z",
+  "requestFeedback": true,
+  "userFacing": true
+}

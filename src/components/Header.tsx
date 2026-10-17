@@ -209,30 +209,30 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       ) : (
         /* ATTEMPT MODE: Primary Status Card (No correct answers revealed) */
-        <div className="max-w-4xl mx-auto mt-2.5 bg-slate-950/80 rounded-2xl p-3 sm:p-3.5 border border-slate-800/80 shadow-inner">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            {/* Current Question Display (Huge & High Contrast) */}
-            <div className="flex items-baseline gap-2">
-              <span className="text-xs uppercase tracking-wider font-bold text-slate-400">
+        <div className="max-w-4xl mx-auto mt-2.5 bg-slate-950/80 rounded-2xl p-2.5 sm:p-3.5 border border-slate-800/80 shadow-inner">
+          <div className="flex items-center justify-between gap-2">
+            {/* Current Question Display (Responsive & High Contrast) */}
+            <div className="flex items-baseline gap-1.5 sm:gap-2 min-w-0">
+              <span className="text-[11px] sm:text-xs uppercase tracking-wider font-bold text-slate-400 shrink-0">
                 Question
               </span>
-              <span className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+              <span className="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-tight">
                 {currentQuestion}
               </span>
-              <span className="text-sm sm:text-base font-semibold text-slate-400">
+              <span className="text-xs sm:text-sm md:text-base font-semibold text-slate-400 shrink-0">
                 / {endQuestion}
               </span>
             </div>
 
             {/* Current saved answer badge (does NOT reveal correctness) */}
-            <div>
+            <div className="shrink-0">
               {currentAnswer ? (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-blue-950/80 border border-blue-500/50 text-blue-300 text-xs sm:text-sm font-bold">
-                  <span className="w-2 h-2 rounded-full bg-blue-400"></span>
-                  Selected: <strong className="text-blue-100 text-base font-black">{currentAnswer}</strong>
+                <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-xl bg-blue-950/80 border border-blue-500/50 text-blue-300 text-xs sm:text-sm font-bold whitespace-nowrap">
+                  <span className="w-2 h-2 rounded-full bg-blue-400 shrink-0"></span>
+                  <span>Selected: <strong className="text-blue-100 text-sm sm:text-base font-black">{currentAnswer}</strong></span>
                 </span>
               ) : (
-                <span className="inline-flex items-center px-3 py-1 rounded-xl bg-slate-800/90 border border-slate-700 text-slate-400 text-xs font-medium">
+                <span className="inline-flex items-center px-2.5 sm:px-3 py-1 rounded-xl bg-slate-800/90 border border-slate-700 text-slate-400 text-xs font-medium whitespace-nowrap">
                   Unanswered
                 </span>
               )}
@@ -240,27 +240,27 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Stats Row & Unanswered trigger */}
-          <div className="mt-2.5 flex items-center justify-between text-xs sm:text-sm">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
-                <span className="text-slate-300 font-medium">Answered:</span>
+          <div className="mt-2 flex items-center justify-between text-xs sm:text-sm gap-2">
+            <div className="flex items-center flex-wrap gap-2 sm:gap-3">
+              <div className="flex items-center gap-1.5 whitespace-nowrap">
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0"></span>
+                <span className="text-slate-300 font-medium text-[11px] sm:text-xs">Answered:</span>
                 <strong className="text-blue-400 font-bold">{answeredCount}</strong>
               </div>
 
               <button
                 id="unanswered-btn"
                 onClick={() => onOpenModal('unanswered')}
-                className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-amber-950/40 hover:bg-amber-950/70 border border-amber-600/40 text-amber-300 font-bold transition active:scale-95 text-xs"
+                className="flex items-center gap-1.5 px-2 sm:px-2.5 py-0.5 rounded-lg bg-amber-950/40 hover:bg-amber-950/70 border border-amber-600/40 text-amber-300 font-bold transition active:scale-95 text-[11px] sm:text-xs whitespace-nowrap"
                 title="Click to view all unanswered questions and jump to them"
               >
-                <ListOrdered className="w-3.5 h-3.5 text-amber-400" />
+                <ListOrdered className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                 <span>Unanswered:</span>
                 <strong className="text-amber-400 font-black">{unansweredCount}</strong>
               </button>
             </div>
 
-            <span className="text-slate-400 font-medium hidden xs:inline text-xs">
+            <span className="text-slate-400 font-medium hidden xs:inline text-xs whitespace-nowrap shrink-0">
               {percent}% done
             </span>
           </div>
