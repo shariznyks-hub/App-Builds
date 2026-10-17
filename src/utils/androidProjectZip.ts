@@ -173,7 +173,16 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import org.json.JSONArray
 import org.json.JSONObject
+
+data class MCQQuestion(
+    val number: Int,
+    val questionText: String,
+    val options: Map<String, String> = emptyMap(),
+    val correctAnswer: String = "",
+    val explanation: String = ""
+)
 
 data class MCQUiState(
     val startQuestion: Int = 1,
@@ -184,12 +193,17 @@ data class MCQUiState(
     val showUnansweredDialog: Boolean = false,
     val showExportDialog: Boolean = false,
     val showClearAllDialog: Boolean = false,
-    val showSetupDialog: Boolean = false
+    val showSetupDialog: Boolean = false,
+    val showImportDialog: Boolean = false,
+    val showSubmitConfirmDialog: Boolean = false,
+    val questions: Map<Int, MCQQuestion> = emptyMap(),
+    val isSubmitted: Boolean = false
 ) {
     val endQuestion: Int get() = startQuestion + totalQuestions - 1
     val answeredCount: Int get() = answers.count { it.key in startQuestion..endQuestion && it.value.isNotBlank() }
     val unansweredCount: Int get() = totalQuestions - answeredCount
     val currentAnswer: String? get() = answers[currentQuestion]
+    val currentQuestionItem: MCQQuestion? get() = questions[currentQuestion]
     
     val unansweredList: List<Int> get() {
         val list = mutableListOf<Int>()
@@ -199,6 +213,25 @@ data class MCQUiState(
             }
         }
         return list
+    }
+
+    val correctCount: Int get() = answers.count { (q, ans) ->
+        val item = questions[q]
+        item != null && item.correctAnswer.isNotBlank() && item.correctAnswer.equals(ans.trim(), ignoreCase = true)
+    }
+
+    val incorrectCount: Int get() = answers.count { (q, ans) ->
+        val item = questions[q]
+        item != null && item.correctAnswer.isNotBlank() && !item.correctAnswer.equals(ans.trim(), ignoreCase = true)
+    }
+
+    val unattemptedEvaluatedCount: Int get() {
+        return questions.count { (q, _) -> answers[q].isNullOrBlank() }
+    }
+
+    val finalScorePercentage: Int get() {
+        val total = if (questions.isNotEmpty()) questions.size else totalQuestions
+        return if (total > 0) ((correctCount.toFloat() / total) * 100).toInt() else 0
     }
 }
 
@@ -213,6 +246,7 @@ class MCQViewModel(application: Application) : AndroidViewModel(application) {
         val total = prefs.getInt("total_questions", 500)
         val current = prefs.getInt("current_question", start)
         val optionsCount = prefs.getInt("options_count", 4)
+        val isSubmitted = prefs.getBoolean("is_submitted", false)
 
         val answersMap = mutableMapOf<Int, String>()
         val answersJson = prefs.getString("answers_json", null)
@@ -232,12 +266,42 @@ class MCQViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
 
+        val questionsMap = mutableMapOf<Int, MCQQuestion>()
+        val questionsJson = prefs.getString("questions_json", null)
+        if (!questionsJson.isNullOrBlank()) {
+            try {
+                val arr = JSONArray(questionsJson)
+                for (i in 0 until arr.length()) {
+                    val obj = arr.getJSONObject(i)
+                    val num = obj.getInt("number")
+                    val qText = obj.getString("questionText")
+                    val optObj = obj.getJSONObject("options")
+                    val opts = mutableMapOf<String, String>()
+                    val keys = optObj.keys()
+                    while (keys.hasNext()) {
+                        val k = keys.next()
+                        opts[k] = optObj.getString(k)
+                    }
+                    val corr = obj.optString("correctAnswer", "")
+                    val exp = obj.optString("explanation", "")
+                    questionsMap[num] = MCQQuestion(num, qText, opts, corr, exp)
+                }
+            } catch (e: Exception) {
+                // ignore
+            }
+        }
+
+        val effectiveTotal = if (questionsMap.isNotEmpty()) questionsMap.size else total
+        val effectiveStart = if (questionsMap.isNotEmpty()) (questionsMap.keys.minOrNull() ?: start) else start
+
         return MCQUiState(
-            startQuestion = start,
-            totalQuestions = total,
-            currentQuestion = current.coerceIn(start, start + total - 1),
+            startQuestion = effectiveStart,
+            totalQuestions = effectiveTotal,
+            currentQuestion = current.coerceIn(effectiveStart, effectiveStart + effectiveTotal - 1),
             answers = answersMap,
-            optionsCount = optionsCount
+            optionsCount = optionsCount,
+            questions = questionsMap,
+            isSubmitted = isSubmitted
         )
     }
 
@@ -247,16 +311,33 @@ class MCQViewModel(application: Application) : AndroidViewModel(application) {
         state.answers.forEach { (q, ans) ->
             json.put(q.toString(), ans)
         }
+
+        val qArr = JSONArray()
+        state.questions.values.forEach { q ->
+            val obj = JSONObject()
+            obj.put("number", q.number)
+            obj.put("questionText", q.questionText)
+            val optObj = JSONObject()
+            q.options.forEach { (k, v) -> optObj.put(k, v) }
+            obj.put("options", optObj)
+            obj.put("correctAnswer", q.correctAnswer)
+            obj.put("explanation", q.explanation)
+            qArr.put(obj)
+        }
+
         prefs.edit()
             .putInt("start_question", state.startQuestion)
             .putInt("total_questions", state.totalQuestions)
             .putInt("current_question", state.currentQuestion)
             .putInt("options_count", state.optionsCount)
             .putString("answers_json", json.toString())
+            .putString("questions_json", qArr.toString())
+            .putBoolean("is_submitted", state.isSubmitted)
             .apply()
     }
 
     fun answerCurrent(option: String) {
+        if (_uiState.value.isSubmitted) return
         _uiState.update { state ->
             val updated = state.answers.toMutableMap()
             updated[state.currentQuestion] = option
@@ -301,6 +382,7 @@ class MCQViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun clearCurrentAnswer() {
+        if (_uiState.value.isSubmitted) return
         _uiState.update { state ->
             val updated = state.answers.toMutableMap()
             updated.remove(state.currentQuestion)
@@ -314,7 +396,8 @@ class MCQViewModel(application: Application) : AndroidViewModel(application) {
             state.copy(
                 answers = emptyMap(),
                 currentQuestion = state.startQuestion,
-                showClearAllDialog = false
+                showClearAllDialog = false,
+                isSubmitted = false
             )
         }
         persistState()
@@ -335,10 +418,128 @@ class MCQViewModel(application: Application) : AndroidViewModel(application) {
         persistState()
     }
 
+    fun parseQuestions(raw: String): List<MCQQuestion> {
+        val list = mutableListOf<MCQQuestion>()
+        val regex = Regex("\\\\[Q(\\\\d+)\\\\]([\\\\s\\\\S]*?)\\\\[/Q\\\\1\\\\]", RegexOption.IGNORE_CASE)
+        val matches = regex.findAll(raw)
+
+        for (m in matches) {
+            val qNum = m.groupValues[1].toIntOrNull() ?: continue
+            val body = m.groupValues[2]
+
+            var qText = ""
+            var optA = ""
+            var optB = ""
+            var optC = ""
+            var optD = ""
+            var correct = ""
+            val explanationLines = mutableListOf<String>()
+
+            val lines = body.lines()
+            var currentSection = ""
+
+            for (line in lines) {
+                val trimmed = line.trim()
+                if (trimmed.startsWith("Question:", ignoreCase = true)) {
+                    qText = trimmed.substringAfter(":").trim()
+                    currentSection = "question"
+                } else if (trimmed.startsWith("A:", ignoreCase = true)) {
+                    optA = trimmed.substringAfter(":").trim()
+                    currentSection = "A"
+                } else if (trimmed.startsWith("B:", ignoreCase = true)) {
+                    optB = trimmed.substringAfter(":").trim()
+                    currentSection = "B"
+                } else if (trimmed.startsWith("C:", ignoreCase = true)) {
+                    optC = trimmed.substringAfter(":").trim()
+                    currentSection = "C"
+                } else if (trimmed.startsWith("D:", ignoreCase = true)) {
+                    optD = trimmed.substringAfter(":").trim()
+                    currentSection = "D"
+                } else if (trimmed.startsWith("Correct:", ignoreCase = true)) {
+                    correct = trimmed.substringAfter(":").trim().uppercase().take(1)
+                    currentSection = "correct"
+                } else if (trimmed.startsWith("Explanation:", ignoreCase = true)) {
+                    val exp = trimmed.substringAfter(":").trim()
+                    if (exp.isNotBlank()) explanationLines.add(exp)
+                    currentSection = "explanation"
+                } else if (trimmed.isNotBlank()) {
+                    if (currentSection == "question") {
+                        qText += " $trimmed"
+                    } else if (currentSection == "explanation") {
+                        explanationLines.add(trimmed)
+                    }
+                }
+            }
+
+            val opts = mutableMapOf<String, String>()
+            if (optA.isNotBlank()) opts["A"] = optA
+            if (optB.isNotBlank()) opts["B"] = optB
+            if (optC.isNotBlank()) opts["C"] = optC
+            if (optD.isNotBlank()) opts["D"] = optD
+
+            list.add(
+                MCQQuestion(
+                    number = qNum,
+                    questionText = qText.ifBlank { "Question $qNum" },
+                    options = opts,
+                    correctAnswer = correct,
+                    explanation = explanationLines.joinToString("\\n").trim()
+                )
+            )
+        }
+        return list.sortedBy { it.number }
+    }
+
+    fun loadQuestionsFromText(rawText: String): Boolean {
+        val parsed = parseQuestions(rawText)
+        if (parsed.isEmpty()) return false
+
+        val map = parsed.associateBy { it.number }
+        val firstQ = parsed.first().number
+        val count = parsed.size
+
+        _uiState.update { state ->
+            state.copy(
+                questions = map,
+                startQuestion = firstQ,
+                totalQuestions = count,
+                currentQuestion = firstQ,
+                answers = emptyMap(),
+                isSubmitted = false,
+                showImportDialog = false
+            )
+        }
+        persistState()
+        return true
+    }
+
+    fun submitTest() {
+        _uiState.update { state ->
+            state.copy(
+                isSubmitted = true,
+                showSubmitConfirmDialog = false
+            )
+        }
+        persistState()
+    }
+
+    fun retakeTest() {
+        _uiState.update { state ->
+            state.copy(
+                isSubmitted = false,
+                answers = emptyMap(),
+                currentQuestion = state.startQuestion
+            )
+        }
+        persistState()
+    }
+
     fun setUnansweredDialog(show: Boolean) = _uiState.update { it.copy(showUnansweredDialog = show) }
     fun setExportDialog(show: Boolean) = _uiState.update { it.copy(showExportDialog = show) }
     fun setClearAllDialog(show: Boolean) = _uiState.update { it.copy(showClearAllDialog = show) }
     fun setSetupDialog(show: Boolean) = _uiState.update { it.copy(showSetupDialog = show) }
+    fun setImportDialog(show: Boolean) = _uiState.update { it.copy(showImportDialog = show) }
+    fun setSubmitConfirmDialog(show: Boolean) = _uiState.update { it.copy(showSubmitConfirmDialog = show) }
 
     fun generateTxtExport(): String {
         val state = _uiState.value
@@ -361,6 +562,53 @@ class MCQViewModel(application: Application) : AndroidViewModel(application) {
         }
         return sb.toString().trimEnd()
     }
+}
+`
+  );
+
+  const themePkg = javaPkg?.folder('ui')?.folder('theme');
+  themePkg?.file(
+    'Theme.kt',
+    `package com.mcq.answerpad.ui.theme
+
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
+
+val Slate950 = Color(0xFF090D16)
+val Slate900 = Color(0xFF0F172A)
+val Slate800 = Color(0xFF1E293B)
+val Slate700 = Color(0xFF334155)
+val Slate400 = Color(0xFF94A3B8)
+val Slate100 = Color(0xFFF1F5F9)
+
+val EmeraldAccent = Color(0xFF10B981)
+val BlueAccent = Color(0xFF3B82F6)
+val BlueSelected = Color(0xFF2563EB)
+val AmberSkip = Color(0xFFF59E0B)
+val RoseClear = Color(0xFFEF4444)
+
+private val DarkColorScheme = darkColorScheme(
+    primary = BlueAccent,
+    onPrimary = Color.White,
+    secondary = EmeraldAccent,
+    onSecondary = Color.White,
+    tertiary = AmberSkip,
+    background = Slate950,
+    onBackground = Slate100,
+    surface = Slate900,
+    onSurface = Slate100,
+    surfaceVariant = Slate800,
+    onSurfaceVariant = Slate400
+)
+
+@Composable
+fun MCQAnswerPadTheme(content: @Composable () -> Unit) {
+    MaterialTheme(
+        colorScheme = DarkColorScheme,
+        content = content
+    )
 }
 `
   );

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Check, X, FastForward, CheckCircle2, XCircle, AlertCircle, HelpCircle } from 'lucide-react';
+import { Check, X, FastForward, CheckCircle2, XCircle, AlertCircle, HelpCircle, FileCode } from 'lucide-react';
 import { MCQOption, MCQQuestionItem } from '../types';
 
 interface AnswerPadProps {
@@ -11,6 +11,7 @@ interface AnswerPadProps {
   onSkip: () => void;
   onPrevious: () => void;
   onNext: () => void;
+  onOpenImport?: () => void;
 }
 
 const ALL_OPTIONS: MCQOption[] = ['A', 'B', 'C', 'D'];
@@ -24,6 +25,7 @@ export const AnswerPad: React.FC<AnswerPadProps> = ({
   onSkip,
   onPrevious,
   onNext,
+  onOpenImport,
 }) => {
   const options = ALL_OPTIONS;
 
@@ -84,6 +86,28 @@ export const AnswerPad: React.FC<AnswerPadProps> = ({
 
   return (
     <div className="flex-1 flex flex-col w-full max-w-4xl mx-auto px-4 py-2 select-none justify-between min-h-0 overflow-y-auto">
+      {/* Quick Paste Questions Notice if no question text is loaded yet */}
+      {!questionItem && !isSubmitted && onOpenImport && (
+        <div className="bg-slate-900 border border-amber-500/30 rounded-2xl p-3 mb-2 flex items-center justify-between gap-3 shadow-sm">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0">
+              <FileCode className="w-4 h-4 text-amber-400" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-slate-200 truncate">Want question text & auto-grading?</p>
+              <p className="text-[11px] text-slate-400 truncate">Paste questions in [Q1]...[/Q1] format with hidden key</p>
+            </div>
+          </div>
+          <button
+            id="paste-questions-banner-btn"
+            onClick={onOpenImport}
+            className="shrink-0 bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-bold text-xs px-3 py-1.5 rounded-xl shadow-sm transition active:scale-95"
+          >
+            Paste Questions
+          </button>
+        </div>
+      )}
+
       {/* Question Text Header Card (if question text is provided) */}
       {questionItem && (
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 mb-2.5 shadow-sm">

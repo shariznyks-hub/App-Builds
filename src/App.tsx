@@ -71,6 +71,7 @@ export default function App() {
           onSkip={skipCurrent}
           onPrevious={goToPrevious}
           onNext={goToNext}
+          onOpenImport={() => setActiveModal('importQuestions')}
         />
       </main>
 

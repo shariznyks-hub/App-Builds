@@ -53,14 +53,14 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="w-full bg-slate-900 border-b border-slate-800 px-4 py-2.5 sm:py-3 select-none">
-      {/* Top row: App title + Quick actions */}
+      {/* Top row: App title + Secondary quick actions */}
       <div className="max-w-4xl mx-auto flex items-center justify-between gap-2">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center font-black text-white text-lg shadow-sm">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 sm:w-9 sm:h-9 shrink-0 rounded-xl bg-blue-600 flex items-center justify-center font-black text-white text-base shadow-sm">
             M
           </div>
-          <div>
-            <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+          <div className="min-w-0">
+            <h1 className="text-base sm:text-xl font-bold tracking-tight text-white truncate">
               MCQ Answer Pad
             </h1>
             <p className="text-xs text-slate-400 font-medium hidden sm:block">
@@ -69,47 +69,49 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Action icons & Primary Submit/Retake */}
-        <div className="flex items-center gap-1.5 sm:gap-2">
-          {/* Submit Test Button (when in Attempt Mode) */}
-          {!isSubmitted ? (
-            <button
-              id="submit-test-btn"
-              onClick={onSubmitTest}
-              className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-bold px-3 py-1.5 sm:py-2 rounded-xl transition shadow-md shadow-emerald-950/40 active:scale-95"
-              title="Submit Test for Evaluation"
-            >
-              <Send className="w-4 h-4" />
-              <span>Submit Test</span>
-            </button>
-          ) : (
-            <button
-              id="retake-test-btn"
-              onClick={onRetakeTest}
-              className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-bold px-3 py-1.5 sm:py-2 rounded-xl transition shadow-md active:scale-95"
-              title="Retake Quiz / Clear Answers"
-            >
-              <RotateCcw className="w-4 h-4" />
-              <span>Retake Test</span>
-            </button>
-          )}
+        {/* Action icons & Primary Submit/Retake for Desktop (sm+) */}
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {/* Submit/Retake Button (Desktop) */}
+          <div className="hidden sm:flex items-center">
+            {!isSubmitted ? (
+              <button
+                id="submit-test-btn"
+                onClick={onSubmitTest}
+                className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-bold px-3 py-1.5 sm:py-2 rounded-xl transition shadow-md shadow-emerald-950/40 active:scale-95"
+                title="Submit Test for Evaluation"
+              >
+                <Send className="w-4 h-4" />
+                <span>Submit Test</span>
+              </button>
+            ) : (
+              <button
+                id="retake-test-btn"
+                onClick={onRetakeTest}
+                className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-bold px-3 py-1.5 sm:py-2 rounded-xl transition shadow-md active:scale-95"
+                title="Retake Quiz / Clear Answers"
+              >
+                <RotateCcw className="w-4 h-4" />
+                <span>Retake Test</span>
+              </button>
+            )}
+          </div>
 
-          {/* Import / Load Questions Modal Button */}
+          {/* Import / Load Questions Modal Button (Desktop) */}
           <button
             id="open-import-btn"
             onClick={() => onOpenModal('importQuestions')}
-            className="flex items-center gap-1 text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-700 transition active:scale-95"
+            className="hidden sm:flex items-center gap-1.5 text-amber-300 hover:text-white bg-slate-800 hover:bg-slate-700 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-amber-500/40 transition active:scale-95 shadow-sm"
             title="Import or Edit Questions in [Q1]...[/Q1] format"
           >
             <FileCode className="w-4 h-4 text-amber-400" />
-            <span className="hidden sm:inline">Questions</span>
+            <span>Questions</span>
           </button>
 
           {isPWAInstallable && (
             <button
               id="install-pwa-btn"
               onClick={onInstallPWA}
-              className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-700 transition active:scale-95"
+              className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold px-2 py-1.5 rounded-lg border border-slate-700 transition active:scale-95"
               title="Install on Tablet"
             >
               <Download className="w-4 h-4 text-blue-400" />
@@ -118,29 +120,19 @@ export const Header: React.FC<HeaderProps> = ({
           )}
 
           <button
-            id="open-install-guide-btn"
-            onClick={() => onOpenModal('androidInstall')}
-            className="hidden md:flex items-center gap-1 text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 text-xs font-medium px-2 py-1.5 rounded-lg border border-slate-700 transition active:scale-95"
-            title="Install APK or PWA on Tablet"
-          >
-            <Tablet className="w-4 h-4 text-emerald-400" />
-            <span>APK</span>
-          </button>
-
-          <button
             id="open-export-btn"
             onClick={() => onOpenModal('export')}
-            className="flex items-center gap-1.5 p-2 sm:px-3 text-slate-200 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 transition active:scale-95 text-xs font-semibold"
+            className="flex items-center gap-1 p-1.5 sm:px-3 text-slate-200 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 transition active:scale-95 text-xs font-semibold"
             title="Export TXT / CSV"
           >
             <Share2 className="w-4 h-4 text-blue-400" />
-            <span className="hidden sm:inline">Export</span>
+            <span className="hidden md:inline">Export</span>
           </button>
 
           <button
             id="open-setup-btn"
             onClick={() => onOpenModal('setup')}
-            className="p-2 text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 transition active:scale-95"
+            className="p-1.5 sm:p-2 text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 transition active:scale-95"
             title="Question Range & Settings"
             aria-label="Settings"
           >
@@ -151,7 +143,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               id="open-clear-all-btn"
               onClick={() => onOpenModal('clearConfirm')}
-              className="p-2 text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 bg-slate-800 rounded-lg border border-slate-700 transition active:scale-95"
+              className="p-1.5 sm:p-2 text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 bg-slate-800 rounded-lg border border-slate-700 transition active:scale-95"
               title="Clear all answers"
               aria-label="Clear all answers"
             >
@@ -159,6 +151,40 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           )}
         </div>
+      </div>
+
+      {/* MOBILE-ONLY DEDICATED ACTION BAR (Ensures Paste Questions & Submit Test are 100% prominent & visible) */}
+      <div className="sm:hidden max-w-4xl mx-auto mt-2 grid grid-cols-2 gap-2">
+        {/* Paste Questions Button */}
+        <button
+          id="open-import-btn-mobile"
+          onClick={() => onOpenModal('importQuestions')}
+          className="flex items-center justify-center gap-1.5 bg-slate-800 active:bg-slate-700 border border-amber-500/50 hover:border-amber-400 text-amber-300 py-1.5 px-2 rounded-xl text-xs font-bold shadow-sm transition active:scale-95 min-w-0"
+        >
+          <FileCode className="w-4 h-4 text-amber-400 shrink-0" />
+          <span className="truncate">Paste Questions</span>
+        </button>
+
+        {/* Submit or Retake Test Button */}
+        {!isSubmitted ? (
+          <button
+            id="submit-test-btn-mobile"
+            onClick={onSubmitTest}
+            className="flex items-center justify-center gap-1.5 bg-emerald-600 active:bg-emerald-500 text-white py-1.5 px-2 rounded-xl text-xs font-bold shadow-sm shadow-emerald-950/50 transition active:scale-95 min-w-0"
+          >
+            <Send className="w-4 h-4 shrink-0" />
+            <span className="truncate">Submit Test</span>
+          </button>
+        ) : (
+          <button
+            id="retake-test-btn-mobile"
+            onClick={onRetakeTest}
+            className="flex items-center justify-center gap-1.5 bg-blue-600 active:bg-blue-500 text-white py-1.5 px-2 rounded-xl text-xs font-bold shadow-sm transition active:scale-95 min-w-0"
+          >
+            <RotateCcw className="w-4 h-4 shrink-0" />
+            <span className="truncate">Retake Test</span>
+          </button>
+        )}
       </div>
 
       {/* EVALUATION SUMMARY BANNER (Shown at top after submission) */}
