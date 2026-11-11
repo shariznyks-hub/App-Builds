@@ -44,6 +44,15 @@ include(":app")
 `
   );
 
+  zip.file(
+    'gradle.properties',
+    `org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+android.useAndroidX=true
+android.nonTransitiveRClass=true
+kotlin.code.style=official
+`
+  );
+
   // Gradle wrapper
   const wrapper = zip.folder('gradle')?.folder('wrapper');
   wrapper?.file(

@@ -25,7 +25,7 @@ jobs:
 
       - name: Build Debug APK with Gradle Wrapper
         working-directory: android
-        run: ./gradlew assembleDebug --stacktrace
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4

@@ -43,33 +43,33 @@ object AndroidEffects {
     init {
         try {
             toneGen = ToneGenerator(AudioManager.STREAM_MUSIC, 70)
-        } catch (_: Exception) {}
+        } catch (e: Exception) {}
     }
 
     fun playClick(context: Context, sound: Boolean, haptic: Boolean) {
         if (sound) {
-            try { toneGen?.startTone(ToneGenerator.TONE_PROP_BEEP, 35) } catch (_: Exception) {}
+            try { toneGen?.startTone(ToneGenerator.TONE_PROP_BEEP, 35) } catch (e: Exception) {}
         }
         if (haptic) triggerVibration(context, 20)
     }
 
     fun playSelect(context: Context, sound: Boolean, haptic: Boolean) {
         if (sound) {
-            try { toneGen?.startTone(ToneGenerator.TONE_PROP_ACK, 45) } catch (_: Exception) {}
+            try { toneGen?.startTone(ToneGenerator.TONE_PROP_ACK, 45) } catch (e: Exception) {}
         }
         if (haptic) triggerVibration(context, 35)
     }
 
     fun playMilestone(context: Context, sound: Boolean, haptic: Boolean) {
         if (sound) {
-            try { toneGen?.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 120) } catch (_: Exception) {}
+            try { toneGen?.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 120) } catch (e: Exception) {}
         }
         if (haptic) triggerVibrationPattern(context, longArrayOf(0, 40, 50, 40))
     }
 
     fun playVictory(context: Context, sound: Boolean, haptic: Boolean) {
         if (sound) {
-            try { toneGen?.startTone(ToneGenerator.TONE_CDMA_CONFIRM, 180) } catch (_: Exception) {}
+            try { toneGen?.startTone(ToneGenerator.TONE_CDMA_CONFIRM, 180) } catch (e: Exception) {}
         }
         if (haptic) triggerVibrationPattern(context, longArrayOf(0, 50, 60, 90))
     }
@@ -89,7 +89,7 @@ object AndroidEffects {
             } else {
                 vibrator?.vibrate(ms)
             }
-        } catch (_: Exception) {}
+        } catch (e: Exception) {}
     }
 
     @Suppress("DEPRECATION")
@@ -107,7 +107,7 @@ object AndroidEffects {
             } else {
                 vibrator?.vibrate(pattern, -1)
             }
-        } catch (_: Exception) {}
+        } catch (e: Exception) {}
     }
 }
 
@@ -895,16 +895,21 @@ fun MCQScreen(viewModel: MCQViewModel) {
                                 Text("Level ${state.level}", color = AmberSkip, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                                 Text("${state.totalXP} Total XP", color = Slate400, fontSize = 12.sp)
                             }
-                            Spacer(modifier = Modifier.height(4.dp))
-                            LinearProgressIndicator(
-                                progress = { progressFloat },
+                            Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(6.dp)
-                                    .clip(RoundedCornerShape(3.dp)),
-                                color = AmberSkip,
-                                trackColor = Slate800
-                            )
+                                    .clip(RoundedCornerShape(3.dp))
+                                    .background(Slate800)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth(fraction = progressFloat)
+                                        .fillMaxHeight()
+                                        .clip(RoundedCornerShape(3.dp))
+                                        .background(AmberSkip)
+                                )
+                            }
                             Spacer(modifier = Modifier.height(3.dp))
                             Text("$xpInCurrentLevel / 100 XP to Level ${state.level + 1}", color = Slate400, fontSize = 10.sp)
                         }
