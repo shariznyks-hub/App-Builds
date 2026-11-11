@@ -540,6 +540,8 @@ class MCQViewModel(application: Application) : AndroidViewModel(application) {
     fun setSetupDialog(show: Boolean) = _uiState.update { it.copy(showSetupDialog = show) }
     fun setImportDialog(show: Boolean) = _uiState.update { it.copy(showImportDialog = show) }
     fun setSubmitConfirmDialog(show: Boolean) = _uiState.update { it.copy(showSubmitConfirmDialog = show) }
+    fun setTargetCompletedDialog(show: Boolean) = _uiState.update { it.copy(showTargetCompletedDialog = show) }
+    fun setPerformanceDashboard(show: Boolean) = _uiState.update { it.copy(showPerformanceDashboard = show) }
 
     fun generateTxtExport(): String {
         val state = _uiState.value
@@ -547,18 +549,68 @@ class MCQViewModel(application: Application) : AndroidViewModel(application) {
         for (q in state.startQuestion..state.endQuestion) {
             val ans = state.answers[q] ?: ""
             val valid = if (ans in listOf("A", "B", "C", "D")) ans else ""
-            sb.append("$q-$valid\\n")
+            if (!state.isSubmitted) {
+                sb.append("$q-$valid\\n")
+            } else {
+                val item = state.questions[q]
+                val corr = item?.correctAnswer ?: ""
+                val res = if (valid.isBlank()) "Unattempted" else if (valid.equals(corr, ignoreCase = true)) "Correct" else "Incorrect"
+                sb.append("$q-$valid | Correct: $corr | Result: $res\\n")
+            }
         }
         return sb.toString().trimEnd()
     }
 
     fun generateCsvExport(): String {
         val state = _uiState.value
-        val sb = StringBuilder("Question,Answer\\n")
-        for (q in state.startQuestion..state.endQuestion) {
-            val ans = state.answers[q] ?: ""
-            val valid = if (ans in listOf("A", "B", "C", "D")) ans else ""
-            sb.append("$q,$valid\\n")
+        val sb = StringBuilder()
+        if (!state.isSubmitted) {
+            sb.append("Question,Answer\\n")
+            for (q in state.startQuestion..state.endQuestion) {
+                val ans = state.answers[q] ?: ""
+                val valid = if (ans in listOf("A", "B", "C", "D")) ans else ""
+                sb.append("$q,$valid\\n")
+            }
+        } else {
+            sb.append("Question,Selected Answer,Correct Answer,Result,Explanation\\n")
+            for (q in state.startQuestion..state.endQuestion) {
+                val ans = state.answers[q] ?: ""
+                val valid = if (ans in listOf("A", "B", "C", "D")) ans else ""
+                val item = state.questions[q]
+                val corr = item?.correctAnswer ?: ""
+                val exp = item?.explanation ?: ""
+                val res = if (valid.isBlank()) "Unattempted" else if (valid.equals(corr, ignoreCase = true)) "Correct" else "Incorrect"
+                val escapedExp = "\\"" + exp.replace("\\"", "\\"\\"") + "\\""
+                sb.append("$q,$valid,$corr,$res,$escapedExp\\n")
+            }
+        }
+        return sb.toString().trimEnd()
+    }
+
+    fun generateIncorrectQuestionsOnlyTxt(): String {
+        val state = _uiState.value
+        val incorrectItems = mutableListOf<MCQQuestion>()
+        state.questions.values.sortedBy { it.number }.forEach { q ->
+            val ans = state.answers[q.number]
+            if (!ans.isNullOrBlank() && q.correctAnswer.isNotBlank() && !q.correctAnswer.equals(ans.trim(), ignoreCase = true)) {
+                incorrectItems.add(q)
+            }
+        }
+        if (incorrectItems.isEmpty()) return ""
+        val sb = StringBuilder()
+        incorrectItems.forEachIndexed { idx, item ->
+            val seq = idx + 1
+            sb.append("[Q$seq]\\n")
+            sb.append("Question: " + item.questionText + "\\n")
+            sb.append("A: " + (item.options["A"] ?: "") + "\\n")
+            sb.append("B: " + (item.options["B"] ?: "") + "\\n")
+            sb.append("C: " + (item.options["C"] ?: "") + "\\n")
+            sb.append("D: " + (item.options["D"] ?: "") + "\\n")
+            sb.append("Correct: " + item.correctAnswer + "\\n")
+            if (item.explanation.isNotBlank()) {
+                sb.append("Explanation: " + item.explanation + "\\n")
+            }
+            sb.append("[/Q$seq]\\n\\n")
         }
         return sb.toString().trimEnd()
     }

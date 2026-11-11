@@ -35,4 +35,51 @@ export type ActiveModal =
   | 'clearConfirm'
   | 'androidInstall'
   | 'importQuestions'
-  | 'submitConfirm';
+  | 'submitConfirm'
+  | 'targetCompleted'
+  | 'performanceDashboard'
+  | 'achievements';
+
+export interface AppSettings {
+  baseTimePerQuestion: number; // in seconds, default 60
+  soundEnabled: boolean;
+  hapticEnabled: boolean;
+}
+
+export interface QuestionTimingRecord {
+  timeSpentSeconds: number;
+  awardedBaseTime: boolean;
+}
+
+export interface Achievement {
+  id: string;
+  title: string;
+  description: string;
+  iconName: string;
+}
+
+export interface QuestionHistoryItem {
+  wasIncorrect: boolean;
+  isFixed: boolean;
+  attempts: number;
+}
+
+export interface GamificationState {
+  totalXP: number;
+  sessionXP: number;
+  level: number;
+  currentStreak: number;
+  personalBestStreak: number;
+  bestSessionQuestions: number;
+  unlockedAchievements: string[];
+  questionHistory: Record<string, QuestionHistoryItem>;
+  totalLifetimeAnswered: number;
+  totalLifetimeCorrect: number;
+}
+
+export interface SessionTargetState {
+  targetCount: number;
+  processedQuestions: number[];
+  isCompleted: boolean;
+  dismissed: boolean;
+}

@@ -30,8 +30,29 @@ data class MCQUiState(
     val showSetupDialog: Boolean = false,
     val showImportDialog: Boolean = false,
     val showSubmitConfirmDialog: Boolean = false,
+    val showTargetCompletedDialog: Boolean = false,
+    val showPerformanceDashboard: Boolean = false,
     val questions: Map<Int, MCQQuestion> = emptyMap(),
-    val isSubmitted: Boolean = false
+    val isSubmitted: Boolean = false,
+
+    // Time Bank
+    val baseTimePerQuestion: Int = 60,
+    val questionTimings: Map<Int, Int> = emptyMap(),
+    val visitedQuestions: Set<Int> = setOf(1),
+    val isTimerPaused: Boolean = false,
+
+    // Session Target
+    val targetCount: Int = 10,
+    val processedQuestions: List<Int> = emptyList(),
+
+    // Gamification & Mistakes
+    val totalXP: Int = 0,
+    val currentStreak: Int = 0,
+    val personalBestStreak: Int = 0,
+    val soundEnabled: Boolean = true,
+    val hapticEnabled: Boolean = true,
+    val mistakesFixedCount: Int = 0,
+    val totalMistakesCount: Int = 0
 ) {
     val endQuestion: Int get() = startQuestion + totalQuestions - 1
     val answeredCount: Int get() = answers.count { it.key in startQuestion..endQuestion && it.value.isNotBlank() }
@@ -49,7 +70,7 @@ data class MCQUiState(
         return list
     }
 
-    // Evaluation stats (Calculated post-submission)
+    // Evaluation stats
     val correctCount: Int get() = answers.count { (q, ans) ->
         val item = questions[q]
         item != null && item.correctAnswer.isNotBlank() && item.correctAnswer.equals(ans.trim(), ignoreCase = true)
@@ -68,6 +89,30 @@ data class MCQUiState(
         val total = if (questions.isNotEmpty()) questions.size else totalQuestions
         return if (total > 0) ((correctCount.toFloat() / total) * 100).toInt() else 0
     }
+
+    // Time Bank Calculations
+    val globalBankBalance: Int get() {
+        val totalAllocated = visitedQuestions.size * baseTimePerQuestion
+        val totalConsumed = questionTimings.values.sum()
+        return totalAllocated - totalConsumed
+    }
+
+    val currentQSecondsSpent: Int get() = questionTimings[currentQuestion] ?: 0
+
+    val currentQRemaining: Int get() {
+        val otherVisited = visitedQuestions.filter { it != currentQuestion }.size
+        val otherSpent = questionTimings.filterKeys { it != currentQuestion }.values.sum()
+        val carryOver = (otherVisited * baseTimePerQuestion) - otherSpent
+        val avail = baseTimePerQuestion + carryOver - currentQSecondsSpent
+        return avail
+    }
+
+    val isOvertime: Boolean get() = currentQRemaining < 0
+    val countdownDisplay: Int get() = if (currentQRemaining > 0) currentQRemaining else 0
+    val overtimeDisplay: Int get() = if (currentQRemaining < 0) -currentQRemaining else 0
+
+    val level: Int get() = 1 + (totalXP / 100)
+    val sessionAccuracy: Int get() = if (answeredCount > 0) ((correctCount.toFloat() / answeredCount) * 100).toInt() else 0
 }
 
 class MCQViewModel(application: Application) : AndroidViewModel(application) {
@@ -82,6 +127,12 @@ class MCQViewModel(application: Application) : AndroidViewModel(application) {
         val current = prefs.getInt("current_question", start)
         val optionsCount = prefs.getInt("options_count", 4)
         val isSubmitted = prefs.getBoolean("is_submitted", false)
+        val baseTime = prefs.getInt("base_time_per_question", 60)
+        val target = prefs.getInt("target_count", 10)
+        val xp = prefs.getInt("total_xp", 0)
+        val bestStreak = prefs.getInt("best_streak", 0)
+        val sound = prefs.getBoolean("sound_enabled", true)
+        val haptic = prefs.getBoolean("haptic_enabled", true)
 
         val answersMap = mutableMapOf<Int, String>()
         val answersJson = prefs.getString("answers_json", null)
@@ -136,7 +187,14 @@ class MCQViewModel(application: Application) : AndroidViewModel(application) {
             answers = answersMap,
             optionsCount = optionsCount,
             questions = questionsMap,
-            isSubmitted = isSubmitted
+            isSubmitted = isSubmitted,
+            baseTimePerQuestion = baseTime,
+            targetCount = target,
+            totalXP = xp,
+            personalBestStreak = bestStreak,
+            soundEnabled = sound,
+            hapticEnabled = haptic,
+            visitedQuestions = setOf(current)
         )
     }
 
@@ -168,6 +226,12 @@ class MCQViewModel(application: Application) : AndroidViewModel(application) {
             .putString("answers_json", json.toString())
             .putString("questions_json", qArr.toString())
             .putBoolean("is_submitted", state.isSubmitted)
+            .putInt("base_time_per_question", state.baseTimePerQuestion)
+            .putInt("target_count", state.targetCount)
+            .putInt("total_xp", state.totalXP)
+            .putInt("best_streak", state.personalBestStreak)
+            .putBoolean("sound_enabled", state.soundEnabled)
+            .putBoolean("haptic_enabled", state.hapticEnabled)
             .apply()
     }
 
@@ -177,7 +241,31 @@ class MCQViewModel(application: Application) : AndroidViewModel(application) {
             val updated = state.answers.toMutableMap()
             updated[state.currentQuestion] = option
             val nextQ = if (state.currentQuestion < state.endQuestion) state.currentQuestion + 1 else state.currentQuestion
-            state.copy(answers = updated, currentQuestion = nextQ)
+
+            val processed = state.processedQuestions.toMutableList()
+            var addedXP = 0
+            var newStreak = state.currentStreak
+            if (!processed.contains(state.currentQuestion)) {
+                processed.add(state.currentQuestion)
+                addedXP = 5
+                newStreak += 1
+            }
+
+            val targetReached = processed.size >= state.targetCount && !state.showTargetCompletedDialog
+
+            val visited = state.visitedQuestions.toMutableSet()
+            visited.add(nextQ)
+
+            state.copy(
+                answers = updated,
+                currentQuestion = nextQ,
+                processedQuestions = processed,
+                totalXP = state.totalXP + addedXP,
+                currentStreak = newStreak,
+                personalBestStreak = maxOf(state.personalBestStreak, newStreak),
+                showTargetCompletedDialog = targetReached,
+                visitedQuestions = visited
+            )
         }
         persistState()
     }
@@ -185,7 +273,30 @@ class MCQViewModel(application: Application) : AndroidViewModel(application) {
     fun skipCurrent() {
         _uiState.update { state ->
             val nextQ = if (state.currentQuestion < state.endQuestion) state.currentQuestion + 1 else state.currentQuestion
-            state.copy(currentQuestion = nextQ)
+
+            val processed = state.processedQuestions.toMutableList()
+            var addedXP = 0
+            var newStreak = state.currentStreak
+            if (!processed.contains(state.currentQuestion)) {
+                processed.add(state.currentQuestion)
+                addedXP = 5
+                newStreak += 1
+            }
+
+            val targetReached = processed.size >= state.targetCount && !state.showTargetCompletedDialog
+
+            val visited = state.visitedQuestions.toMutableSet()
+            visited.add(nextQ)
+
+            state.copy(
+                currentQuestion = nextQ,
+                processedQuestions = processed,
+                totalXP = state.totalXP + addedXP,
+                currentStreak = newStreak,
+                personalBestStreak = maxOf(state.personalBestStreak, newStreak),
+                showTargetCompletedDialog = targetReached,
+                visitedQuestions = visited
+            )
         }
         persistState()
     }
@@ -193,7 +304,10 @@ class MCQViewModel(application: Application) : AndroidViewModel(application) {
     fun nextQuestion() {
         _uiState.update { state ->
             if (state.currentQuestion < state.endQuestion) {
-                state.copy(currentQuestion = state.currentQuestion + 1)
+                val nextQ = state.currentQuestion + 1
+                val visited = state.visitedQuestions.toMutableSet()
+                visited.add(nextQ)
+                state.copy(currentQuestion = nextQ, visitedQuestions = visited)
             } else state
         }
         persistState()
@@ -202,7 +316,10 @@ class MCQViewModel(application: Application) : AndroidViewModel(application) {
     fun previousQuestion() {
         _uiState.update { state ->
             if (state.currentQuestion > state.startQuestion) {
-                state.copy(currentQuestion = state.currentQuestion - 1)
+                val prevQ = state.currentQuestion - 1
+                val visited = state.visitedQuestions.toMutableSet()
+                visited.add(prevQ)
+                state.copy(currentQuestion = prevQ, visitedQuestions = visited)
             } else state
         }
         persistState()
@@ -211,7 +328,9 @@ class MCQViewModel(application: Application) : AndroidViewModel(application) {
     fun jumpTo(questionNumber: Int) {
         _uiState.update { state ->
             val clamped = questionNumber.coerceIn(state.startQuestion, state.endQuestion)
-            state.copy(currentQuestion = clamped, showUnansweredDialog = false)
+            val visited = state.visitedQuestions.toMutableSet()
+            visited.add(clamped)
+            state.copy(currentQuestion = clamped, showUnansweredDialog = false, visitedQuestions = visited)
         }
         persistState()
     }
@@ -232,25 +351,51 @@ class MCQViewModel(application: Application) : AndroidViewModel(application) {
                 answers = emptyMap(),
                 currentQuestion = state.startQuestion,
                 showClearAllDialog = false,
-                isSubmitted = false
+                isSubmitted = false,
+                processedQuestions = emptyList(),
+                currentStreak = 0,
+                questionTimings = emptyMap(),
+                visitedQuestions = setOf(state.startQuestion)
             )
         }
         persistState()
     }
 
-    fun updateRange(start: Int, total: Int, options: Int) {
+    fun updateRangeAndSettings(start: Int, total: Int, baseTime: Int, target: Int, sound: Boolean, haptic: Boolean) {
         val validStart = start.coerceAtLeast(1)
         val validTotal = total.coerceIn(1, 500)
+        val validBase = baseTime.coerceAtLeast(5)
+        val validTarget = target.coerceAtLeast(1)
+
         _uiState.update { state ->
             state.copy(
                 startQuestion = validStart,
                 totalQuestions = validTotal,
                 currentQuestion = validStart,
-                optionsCount = options,
+                baseTimePerQuestion = validBase,
+                targetCount = validTarget,
+                soundEnabled = sound,
+                hapticEnabled = haptic,
                 showSetupDialog = false
             )
         }
         persistState()
+    }
+
+    fun continueTarget(newTarget: Int) {
+        _uiState.update { state ->
+            state.copy(
+                targetCount = newTarget.coerceAtLeast(state.processedQuestions.size + 1),
+                showTargetCompletedDialog = false
+            )
+        }
+        persistState()
+    }
+
+    fun toggleTimerPause() {
+        _uiState.update { state ->
+            state.copy(isTimerPaused = !state.isTimerPaused)
+        }
     }
 
     fun parseQuestions(raw: String): List<MCQQuestion> {
@@ -341,7 +486,10 @@ class MCQViewModel(application: Application) : AndroidViewModel(application) {
                 currentQuestion = firstQ,
                 answers = emptyMap(),
                 isSubmitted = false,
-                showImportDialog = false
+                showImportDialog = false,
+                processedQuestions = emptyList(),
+                visitedQuestions = setOf(firstQ),
+                questionTimings = emptyMap()
             )
         }
         persistState()
@@ -350,9 +498,18 @@ class MCQViewModel(application: Application) : AndroidViewModel(application) {
 
     fun submitTest() {
         _uiState.update { state ->
+            var bonusXP = 0
+            state.answers.forEach { (q, ans) ->
+                val item = state.questions[q]
+                if (item != null && item.correctAnswer.equals(ans.trim(), ignoreCase = true)) {
+                    bonusXP += 5
+                }
+            }
+
             state.copy(
                 isSubmitted = true,
-                showSubmitConfirmDialog = false
+                showSubmitConfirmDialog = false,
+                totalXP = state.totalXP + bonusXP
             )
         }
         persistState()
@@ -363,7 +520,10 @@ class MCQViewModel(application: Application) : AndroidViewModel(application) {
             state.copy(
                 isSubmitted = false,
                 answers = emptyMap(),
-                currentQuestion = state.startQuestion
+                currentQuestion = state.startQuestion,
+                processedQuestions = emptyList(),
+                visitedQuestions = setOf(state.startQuestion),
+                questionTimings = emptyMap()
             )
         }
         persistState()
@@ -375,6 +535,8 @@ class MCQViewModel(application: Application) : AndroidViewModel(application) {
     fun setSetupDialog(show: Boolean) = _uiState.update { it.copy(showSetupDialog = show) }
     fun setImportDialog(show: Boolean) = _uiState.update { it.copy(showImportDialog = show) }
     fun setSubmitConfirmDialog(show: Boolean) = _uiState.update { it.copy(showSubmitConfirmDialog = show) }
+    fun setTargetCompletedDialog(show: Boolean) = _uiState.update { it.copy(showTargetCompletedDialog = show) }
+    fun setPerformanceDashboard(show: Boolean) = _uiState.update { it.copy(showPerformanceDashboard = show) }
 
     fun generateTxtExport(): String {
         val state = _uiState.value
@@ -382,18 +544,71 @@ class MCQViewModel(application: Application) : AndroidViewModel(application) {
         for (q in state.startQuestion..state.endQuestion) {
             val ans = state.answers[q] ?: ""
             val valid = if (ans in listOf("A", "B", "C", "D")) ans else ""
-            sb.append("$q-$valid\n")
+            if (!state.isSubmitted) {
+                sb.append("$q-$valid\n")
+            } else {
+                val item = state.questions[q]
+                val corr = item?.correctAnswer ?: ""
+                val res = if (valid.isBlank()) "Unattempted" else if (valid.equals(corr, ignoreCase = true)) "Correct" else "Incorrect"
+                sb.append("$q-$valid | Correct: $corr | Result: $res\n")
+            }
         }
         return sb.toString().trimEnd()
     }
 
     fun generateCsvExport(): String {
         val state = _uiState.value
-        val sb = StringBuilder("Question,Answer\n")
-        for (q in state.startQuestion..state.endQuestion) {
-            val ans = state.answers[q] ?: ""
-            val valid = if (ans in listOf("A", "B", "C", "D")) ans else ""
-            sb.append("$q,$valid\n")
+        val sb = StringBuilder()
+        if (!state.isSubmitted) {
+            sb.append("Question,Answer\n")
+            for (q in state.startQuestion..state.endQuestion) {
+                val ans = state.answers[q] ?: ""
+                val valid = if (ans in listOf("A", "B", "C", "D")) ans else ""
+                sb.append("$q,$valid\n")
+            }
+        } else {
+            sb.append("Question,Selected Answer,Correct Answer,Result,Explanation\n")
+            for (q in state.startQuestion..state.endQuestion) {
+                val ans = state.answers[q] ?: ""
+                val valid = if (ans in listOf("A", "B", "C", "D")) ans else ""
+                val item = state.questions[q]
+                val corr = item?.correctAnswer ?: ""
+                val exp = item?.explanation ?: ""
+                val res = if (valid.isBlank()) "Unattempted" else if (valid.equals(corr, ignoreCase = true)) "Correct" else "Incorrect"
+                val escapedExp = "\"${exp.replace("\"", "\"\"")}\""
+                sb.append("$q,$valid,$corr,$res,$escapedExp\n")
+            }
+        }
+        return sb.toString().trimEnd()
+    }
+
+    fun generateIncorrectQuestionsOnlyTxt(): String {
+        val state = _uiState.value
+        val incorrectItems = mutableListOf<MCQQuestion>()
+
+        state.questions.values.sortedBy { it.number }.forEach { q ->
+            val ans = state.answers[q.number]
+            if (!ans.isNullOrBlank() && q.correctAnswer.isNotBlank() && !q.correctAnswer.equals(ans.trim(), ignoreCase = true)) {
+                incorrectItems.add(q)
+            }
+        }
+
+        if (incorrectItems.isEmpty()) return ""
+
+        val sb = StringBuilder()
+        incorrectItems.forEachIndexed { idx, item ->
+            val seq = idx + 1
+            sb.append("[Q$seq]\n")
+            sb.append("Question: ${item.questionText}\n")
+            sb.append("A: ${item.options["A"] ?: ""}\n")
+            sb.append("B: ${item.options["B"] ?: ""}\n")
+            sb.append("C: ${item.options["C"] ?: ""}\n")
+            sb.append("D: ${item.options["D"] ?: ""}\n")
+            sb.append("Correct: ${item.correctAnswer}\n")
+            if (item.explanation.isNotBlank()) {
+                sb.append("Explanation: ${item.explanation}\n")
+            }
+            sb.append("[/Q$seq]\n\n")
         }
         return sb.toString().trimEnd()
     }

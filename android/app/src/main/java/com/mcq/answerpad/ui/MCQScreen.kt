@@ -64,6 +64,21 @@ Correct: A
 Explanation: Direct purchase on GeM without comparison is permissible up to Rs. 25,000 for available products.
 [/Q3]"""
 
+private fun formatTime(sec: Int): String {
+    val m = sec / 60
+    val s = sec % 60
+    return String.format("%02d:%02d", m, s)
+}
+
+private fun formatBank(sec: Int): String {
+    val isNeg = sec < 0
+    val abs = kotlin.math.abs(sec)
+    val m = abs / 60
+    val s = abs % 60
+    val sign = if (isNeg) "-" else "+"
+    return String.format("%s%02d:%02d", sign, m, s)
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MCQScreen(viewModel: MCQViewModel) {
@@ -86,7 +101,7 @@ fun MCQScreen(viewModel: MCQViewModel) {
                     Text(
                         text = "MCQ Answer Pad",
                         fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp,
+                        fontSize = 17.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -100,17 +115,17 @@ fun MCQScreen(viewModel: MCQViewModel) {
                             contentColor = AmberSkip
                         ),
                         shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
                         modifier = Modifier.padding(end = 4.dp)
                     ) {
                         Icon(
                             Icons.Default.PostAdd,
                             contentDescription = "Paste Questions",
-                            modifier = Modifier.size(16.dp),
+                            modifier = Modifier.size(15.dp),
                             tint = AmberSkip
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Paste Qs", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.width(3.dp))
+                        Text("Paste Qs", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
 
                     // Submit Test or Retake Button
@@ -119,44 +134,52 @@ fun MCQScreen(viewModel: MCQViewModel) {
                             onClick = { viewModel.setSubmitConfirmDialog(true) },
                             colors = ButtonDefaults.buttonColors(containerColor = EmeraldAccent),
                             shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
                             modifier = Modifier.padding(end = 4.dp)
                         ) {
                             Icon(
                                 Icons.Default.Send,
                                 contentDescription = "Submit Test",
-                                modifier = Modifier.size(14.dp),
+                                modifier = Modifier.size(13.dp),
                                 tint = Color.White
                             )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Submit", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text("Submit", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
                         }
                     } else {
                         Button(
                             onClick = { viewModel.retakeTest() },
                             colors = ButtonDefaults.buttonColors(containerColor = BlueAccent),
                             shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
                             modifier = Modifier.padding(end = 4.dp)
                         ) {
                             Icon(
                                 Icons.Default.Refresh,
                                 contentDescription = "Retake Test",
-                                modifier = Modifier.size(14.dp),
+                                modifier = Modifier.size(13.dp),
                                 tint = Color.White
                             )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Retake", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text("Retake", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
                         }
                     }
 
-                    // Secondary actions dropdown or icons
+                    // Analytics trigger
+                    IconButton(onClick = { viewModel.setPerformanceDashboard(true) }) {
+                        Icon(Icons.Default.EmojiEvents, contentDescription = "Analytics", tint = AmberSkip)
+                    }
+
+                    // Export
                     IconButton(onClick = { viewModel.setExportDialog(true) }) {
                         Icon(Icons.Default.Share, contentDescription = "Export", tint = Slate400)
                     }
+
+                    // Settings
                     IconButton(onClick = { viewModel.setSetupDialog(true) }) {
-                        Icon(Icons.Default.Tune, contentDescription = "Range Settings", tint = Slate400)
+                        Icon(Icons.Default.Tune, contentDescription = "Settings", tint = Slate400)
                     }
+
                     if (!state.isSubmitted) {
                         IconButton(onClick = { viewModel.setClearAllDialog(true) }) {
                             Icon(Icons.Default.DeleteSweep, contentDescription = "Clear All", tint = RoseClear)
@@ -176,7 +199,7 @@ fun MCQScreen(viewModel: MCQViewModel) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = 14.dp, vertical = 6.dp)
+                .padding(horizontal = 12.dp, vertical = 4.dp)
                 .verticalScroll(scrollState),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -185,7 +208,7 @@ fun MCQScreen(viewModel: MCQViewModel) {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 10.dp),
+                        .padding(bottom = 8.dp),
                     colors = CardDefaults.cardColors(containerColor = Slate900),
                     shape = RoundedCornerShape(14.dp),
                     border = androidx.compose.foundation.BorderStroke(2.dp, EmeraldAccent.copy(alpha = 0.5f))
@@ -202,7 +225,7 @@ fun MCQScreen(viewModel: MCQViewModel) {
                             Text(
                                 text = "Test Evaluation Results",
                                 color = EmeraldAccent,
-                                fontSize = 15.sp,
+                                fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold
                             )
                             Surface(
@@ -213,7 +236,7 @@ fun MCQScreen(viewModel: MCQViewModel) {
                                     text = "Score: ${state.correctCount}/${state.totalQuestions} (${state.finalScorePercentage}%)",
                                     color = Color.White,
                                     fontWeight = FontWeight.Black,
-                                    fontSize = 13.sp,
+                                    fontSize = 12.sp,
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                 )
                             }
@@ -225,7 +248,6 @@ fun MCQScreen(viewModel: MCQViewModel) {
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            // Correct badge
                             Surface(
                                 modifier = Modifier.weight(1f),
                                 color = EmeraldAccent.copy(alpha = 0.15f),
@@ -235,14 +257,13 @@ fun MCQScreen(viewModel: MCQViewModel) {
                                 Text(
                                     text = "✓ ${state.correctCount} Correct",
                                     color = EmeraldAccent,
-                                    fontSize = 12.sp,
+                                    fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     textAlign = TextAlign.Center,
                                     modifier = Modifier.padding(vertical = 5.dp)
                                 )
                             }
 
-                            // Incorrect badge
                             Surface(
                                 modifier = Modifier.weight(1f),
                                 color = RoseClear.copy(alpha = 0.15f),
@@ -252,14 +273,13 @@ fun MCQScreen(viewModel: MCQViewModel) {
                                 Text(
                                     text = "✗ ${state.incorrectCount} Wrong",
                                     color = RoseClear,
-                                    fontSize = 12.sp,
+                                    fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     textAlign = TextAlign.Center,
                                     modifier = Modifier.padding(vertical = 5.dp)
                                 )
                             }
 
-                            // Unattempted badge
                             Surface(
                                 modifier = Modifier.weight(1f),
                                 color = AmberSkip.copy(alpha = 0.15f),
@@ -269,7 +289,7 @@ fun MCQScreen(viewModel: MCQViewModel) {
                                 Text(
                                     text = "○ ${state.unattemptedEvaluatedCount} Skipped",
                                     color = AmberSkip,
-                                    fontSize = 12.sp,
+                                    fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     textAlign = TextAlign.Center,
                                     modifier = Modifier.padding(vertical = 5.dp)
@@ -280,53 +300,14 @@ fun MCQScreen(viewModel: MCQViewModel) {
                 }
             }
 
-            // QUICK BANNER IF NO QUESTIONS LOADED YET
-            if (state.questions.isEmpty() && !state.isSubmitted) {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 8.dp)
-                        .clickable { viewModel.setImportDialog(true) },
-                    color = Slate900,
-                    shape = RoundedCornerShape(12.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, AmberSkip.copy(alpha = 0.4f))
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(Icons.Default.PostAdd, contentDescription = null, tint = AmberSkip, modifier = Modifier.size(20.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Column {
-                                Text("Want question text & auto-grading?", color = Slate100, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                Text("Paste MCQs in [Q1]...[/Q1] format with hidden key", color = Slate400, fontSize = 10.sp)
-                            }
-                        }
-                        Button(
-                            onClick = { viewModel.setImportDialog(true) },
-                            colors = ButtonDefaults.buttonColors(containerColor = AmberSkip),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                            shape = RoundedCornerShape(6.dp)
-                        ) {
-                            Text("Paste Qs", color = Slate950, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-            }
-
-            // QUESTION HEADER & COUNTERS BAR
+            // PRIMARY STATUS CARD (Adaptive Time Bank + Targets + Streak)
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = Slate900),
                 shape = RoundedCornerShape(14.dp)
             ) {
                 Column(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Row(
@@ -334,70 +315,87 @@ fun MCQScreen(viewModel: MCQViewModel) {
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        // Question Counter
                         Text(
                             text = "Question ${state.currentQuestion} / ${state.endQuestion}",
                             modifier = Modifier.weight(1f, fill = false),
-                            fontSize = 18.sp,
+                            fontSize = 16.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = BlueAccent,
                             maxLines = 1,
                             softWrap = false
                         )
 
-                        Spacer(modifier = Modifier.width(6.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
 
-                        // Status Badge
+                        // TIME BANK DUAL BADGE
                         if (!state.isSubmitted) {
-                            val isAnswered = !state.currentAnswer.isNullOrBlank()
                             Surface(
-                                color = if (isAnswered) BlueAccent.copy(alpha = 0.2f) else Slate800,
+                                color = Slate950,
                                 shape = RoundedCornerShape(8.dp),
-                                border = androidx.compose.foundation.BorderStroke(
-                                    1.dp,
-                                    if (isAnswered) BlueAccent else Slate700
-                                )
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Slate800)
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Box(
+                                    Icon(
+                                        imageVector = if (state.isTimerPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
+                                        contentDescription = "Timer Pause",
+                                        tint = if (state.isTimerPaused) AmberSkip else Slate400,
                                         modifier = Modifier
-                                            .size(6.dp)
-                                            .clip(RoundedCornerShape(3.dp))
-                                            .background(if (isAnswered) BlueAccent else AmberSkip)
+                                            .size(14.dp)
+                                            .clickable { viewModel.toggleTimerPause() }
                                     )
-                                    Spacer(modifier = Modifier.width(5.dp))
+                                    Spacer(modifier = Modifier.width(3.dp))
                                     Text(
-                                        text = if (isAnswered) "Answered (${state.currentAnswer})" else "Unanswered",
-                                        color = if (isAnswered) BlueAccent else Slate400,
+                                        text = if (state.isOvertime) "+${formatTime(state.overtimeDisplay)}" else formatTime(state.countdownDisplay),
+                                        color = if (state.isOvertime) RoseClear else Slate100,
                                         fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        maxLines = 1,
-                                        softWrap = false
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(text = " | ", color = Slate700, fontSize = 10.sp)
+                                    Text(
+                                        text = formatBank(state.globalBankBalance),
+                                        color = if (state.globalBankBalance >= 0) EmeraldAccent else RoseClear,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold
                                     )
                                 }
                             }
-                        } else {
-                            // Evaluation mode badge for current question
-                            val (badgeBg, badgeBorder, badgeText, badgeColor) = when {
-                                isCorrect -> Quadruple(EmeraldAccent.copy(alpha = 0.2f), EmeraldAccent, "✓ Correct", EmeraldAccent)
-                                isIncorrect -> Quadruple(RoseClear.copy(alpha = 0.2f), RoseClear, "✗ Incorrect", RoseClear)
-                                else -> Quadruple(AmberSkip.copy(alpha = 0.2f), AmberSkip, "○ Unattempted", AmberSkip)
-                            }
+                        }
+
+                        Spacer(modifier = Modifier.width(4.dp))
+
+                        // Target pill & Streak
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Surface(
-                                color = badgeBg,
+                                color = Slate950,
                                 shape = RoundedCornerShape(8.dp),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, badgeBorder)
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Slate800),
+                                modifier = Modifier.clickable { viewModel.setSetupDialog(true) }
                             ) {
                                 Text(
-                                    text = badgeText,
-                                    color = badgeColor,
+                                    text = "🎯 ${state.processedQuestions.size}/${state.targetCount}",
+                                    color = EmeraldAccent,
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                                    maxLines = 1,
-                                    softWrap = false
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Surface(
+                                color = Slate950,
+                                shape = RoundedCornerShape(8.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Slate800),
+                                modifier = Modifier.clickable { viewModel.setPerformanceDashboard(true) }
+                            ) {
+                                Text(
+                                    text = "🔥 ${state.currentStreak}",
+                                    color = AmberSkip,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
                                 )
                             }
                         }
@@ -413,7 +411,7 @@ fun MCQScreen(viewModel: MCQViewModel) {
                         Text(
                             text = "Answered: ${state.answeredCount}",
                             color = Slate400,
-                            fontSize = 12.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Medium,
                             maxLines = 1,
                             softWrap = false
@@ -422,13 +420,13 @@ fun MCQScreen(viewModel: MCQViewModel) {
                             onClick = { viewModel.setUnansweredDialog(true) },
                             colors = ButtonDefaults.buttonColors(containerColor = Slate800),
                             shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 3.dp)
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
                         ) {
                             Text(
                                 text = "Unanswered: ${state.unansweredCount}",
                                 color = AmberSkip,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 12.sp,
+                                fontSize = 11.sp,
                                 maxLines = 1,
                                 softWrap = false
                             )
@@ -442,7 +440,7 @@ fun MCQScreen(viewModel: MCQViewModel) {
                         progress = { progress },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(4.dp)
+                            .height(3.dp)
                             .clip(RoundedCornerShape(2.dp)),
                         color = BlueAccent,
                         trackColor = Slate800
@@ -457,23 +455,23 @@ fun MCQScreen(viewModel: MCQViewModel) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = Slate900),
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(12.dp),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Slate800)
                 ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
+                    Column(modifier = Modifier.padding(10.dp)) {
                         Text(
                             text = "Q${state.currentQuestion}.",
                             color = BlueAccent,
-                            fontSize = 13.sp,
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(3.dp))
                         Text(
                             text = qItem.questionText,
                             color = Slate100,
-                            fontSize = 15.sp,
+                            fontSize = 14.sp,
                             fontWeight = FontWeight.Medium,
-                            lineHeight = 20.sp
+                            lineHeight = 18.sp
                         )
                     }
                 }
@@ -483,7 +481,7 @@ fun MCQScreen(viewModel: MCQViewModel) {
             // MCQ OPTIONS A, B, C, D
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 options.forEach { opt ->
                     val isSelected = state.currentAnswer == opt
@@ -493,7 +491,6 @@ fun MCQScreen(viewModel: MCQViewModel) {
 
                     val (containerColor, contentColor, borderColor, borderWidth) = when {
                         !state.isSubmitted -> {
-                            // ATTEMPT MODE: Normal selection highlight, NEVER reveal answer
                             if (isSelected) {
                                 Quadruple(BlueSelected, Color.White, BlueAccent, 2.dp)
                             } else {
@@ -501,11 +498,9 @@ fun MCQScreen(viewModel: MCQViewModel) {
                             }
                         }
                         isOptionCorrect -> {
-                            // POST-SUBMISSION: Correct answer highlighted GREEN
                             Quadruple(EmeraldAccent.copy(alpha = 0.25f), Color.White, EmeraldAccent, 2.dp)
                         }
                         isOptionWrongSelected -> {
-                            // POST-SUBMISSION: User selected wrong answer highlighted RED
                             Quadruple(RoseClear.copy(alpha = 0.25f), Color.White, RoseClear, 2.dp)
                         }
                         else -> {
@@ -521,14 +516,14 @@ fun MCQScreen(viewModel: MCQViewModel) {
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .defaultMinSize(minHeight = 52.dp),
+                            .defaultMinSize(minHeight = 48.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = containerColor,
                             contentColor = contentColor
                         ),
                         border = androidx.compose.foundation.BorderStroke(borderWidth, borderColor),
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -542,24 +537,24 @@ fun MCQScreen(viewModel: MCQViewModel) {
                                 Surface(
                                     shape = RoundedCornerShape(6.dp),
                                     color = if (isSelected || isOptionCorrect) contentColor.copy(alpha = 0.2f) else Slate800,
-                                    modifier = Modifier.size(30.dp)
+                                    modifier = Modifier.size(28.dp)
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Text(
                                             text = opt,
-                                            fontSize = 16.sp,
+                                            fontSize = 15.sp,
                                             fontWeight = FontWeight.Black,
                                             color = contentColor
                                         )
                                     }
                                 }
 
-                                Spacer(modifier = Modifier.width(10.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
 
                                 if (!optText.isNullOrBlank()) {
                                     Text(
                                         text = optText,
-                                        fontSize = 14.sp,
+                                        fontSize = 13.sp,
                                         fontWeight = if (isSelected || isOptionCorrect) FontWeight.Bold else FontWeight.Normal,
                                         color = contentColor,
                                         textAlign = TextAlign.Start,
@@ -568,44 +563,35 @@ fun MCQScreen(viewModel: MCQViewModel) {
                                 } else {
                                     Text(
                                         text = "Option $opt",
-                                        fontSize = 16.sp,
+                                        fontSize = 14.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = contentColor
                                     )
                                 }
                             }
 
-                            // Icons on right
                             if (!state.isSubmitted && isSelected) {
                                 Icon(
                                     Icons.Default.CheckCircle,
                                     contentDescription = "Selected",
                                     tint = Color.White,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(18.dp)
                                 )
                             } else if (state.isSubmitted) {
                                 if (isOptionCorrect) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text("Correct", color = EmeraldAccent, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Icon(
-                                            Icons.Default.CheckCircle,
-                                            contentDescription = "Correct Answer",
-                                            tint = EmeraldAccent,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
+                                    Icon(
+                                        Icons.Default.CheckCircle,
+                                        contentDescription = "Correct",
+                                        tint = EmeraldAccent,
+                                        modifier = Modifier.size(18.dp)
+                                    )
                                 } else if (isOptionWrongSelected) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text("Your Answer", color = RoseClear, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Icon(
-                                            Icons.Default.Cancel,
-                                            contentDescription = "Wrong Answer",
-                                            tint = RoseClear,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
+                                    Icon(
+                                        Icons.Default.Cancel,
+                                        contentDescription = "Wrong",
+                                        tint = RoseClear,
+                                        modifier = Modifier.size(18.dp)
+                                    )
                                 }
                             }
                         }
@@ -613,41 +599,34 @@ fun MCQScreen(viewModel: MCQViewModel) {
                 }
             }
 
-            // POST-SUBMISSION EXPLANATION & CORRECT ANSWER CARD
+            // POST-SUBMISSION EXPLANATION
             if (state.isSubmitted && qItem != null) {
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = Slate900),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(10.dp),
                     border = androidx.compose.foundation.BorderStroke(1.dp, EmeraldAccent.copy(alpha = 0.4f))
                 ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
+                    Column(modifier = Modifier.padding(10.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Info, contentDescription = null, tint = EmeraldAccent, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Icon(Icons.Default.Info, contentDescription = null, tint = EmeraldAccent, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = "Correct Answer: ${qItem.correctAnswer}",
                                 color = EmeraldAccent,
-                                fontSize = 14.sp,
+                                fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         }
 
                         if (qItem.explanation.isNotBlank()) {
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = "Explanation:",
-                                color = Slate400,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
+                            Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = qItem.explanation,
                                 color = Slate100,
-                                fontSize = 13.sp,
-                                lineHeight = 18.sp
+                                fontSize = 12.sp,
+                                lineHeight = 16.sp
                             )
                         }
                     }
@@ -656,13 +635,13 @@ fun MCQScreen(viewModel: MCQViewModel) {
 
             // SKIP BUTTON (ATTEMPT MODE ONLY)
             if (!state.isSubmitted) {
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 Button(
                     onClick = { viewModel.skipCurrent() },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(48.dp),
-                    shape = RoundedCornerShape(12.dp),
+                        .height(44.dp),
+                    shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Slate900,
                         contentColor = AmberSkip
@@ -672,126 +651,328 @@ fun MCQScreen(viewModel: MCQViewModel) {
                     Icon(
                         Icons.Default.FastForward,
                         contentDescription = "Skip",
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(16.dp)
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = "Skip Question",
-                        fontSize = 14.sp,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // BOTTOM NAVIGATION CONTROLS (PREV, CLEAR, NEXT)
+            // BOTTOM NAVIGATION CONTROLS
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // PREV
                 Button(
                     onClick = { viewModel.previousQuestion() },
                     enabled = state.currentQuestion > state.startQuestion,
                     modifier = Modifier
                         .weight(1f)
-                        .height(44.dp),
-                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Slate900,
-                        contentColor = Slate100,
-                        disabledContainerColor = Slate900.copy(alpha = 0.5f),
-                        disabledContentColor = Slate700
-                    ),
+                        .height(42.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Slate900, contentColor = Slate100),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Slate700)
                 ) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Prev", fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, modifier = Modifier.size(15.dp))
+                    Spacer(modifier = Modifier.width(3.dp))
+                    Text("Prev", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
 
-                // CLEAR ANSWER (Attempt Mode) or REVIEW (Evaluation Mode)
                 if (!state.isSubmitted) {
                     Button(
                         onClick = { viewModel.clearCurrentAnswer() },
                         enabled = !state.currentAnswer.isNullOrBlank(),
                         modifier = Modifier
-                            .weight(1.2f)
-                            .height(44.dp),
-                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Slate900,
-                            contentColor = RoseClear,
-                            disabledContainerColor = Slate900.copy(alpha = 0.5f),
-                            disabledContentColor = Slate700
-                        ),
+                            .weight(1.1f)
+                            .height(42.dp),
+                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Slate900, contentColor = RoseClear),
                         border = androidx.compose.foundation.BorderStroke(1.dp, Slate700)
                     ) {
-                        Icon(
-                            Icons.Default.Clear,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Clear Ans", fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+                        Text("Clear Ans", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                 } else {
                     Button(
                         onClick = { viewModel.setUnansweredDialog(true) },
                         modifier = Modifier
-                            .weight(1.2f)
-                            .height(44.dp),
-                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Slate900,
-                            contentColor = AmberSkip
-                        ),
+                            .weight(1.1f)
+                            .height(42.dp),
+                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Slate900, contentColor = AmberSkip),
                         border = androidx.compose.foundation.BorderStroke(1.dp, Slate700)
                     ) {
-                        Text("Review All", fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+                        Text("Review All", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                 }
 
-                // NEXT
                 Button(
                     onClick = { viewModel.nextQuestion() },
                     enabled = state.currentQuestion < state.endQuestion,
                     modifier = Modifier
                         .weight(1f)
-                        .height(44.dp),
-                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Slate900,
-                        contentColor = Slate100,
-                        disabledContainerColor = Slate900.copy(alpha = 0.5f),
-                        disabledContentColor = Slate700
-                    ),
+                        .height(42.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Slate900, contentColor = Slate100),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Slate700)
                 ) {
-                    Text("Next", fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Icon(
-                        Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
+                    Text("Next", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.width(3.dp))
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(15.dp))
                 }
             }
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
         }
     }
 
-    // PASTE QUESTIONS MODAL / DIALOG
+    // TARGET COMPLETED DIALOG
+    if (state.showTargetCompletedDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.setTargetCompletedDialog(false) },
+            containerColor = Slate900,
+            title = {
+                Text("🎯 Session Target Completed!", fontWeight = FontWeight.Bold, color = EmeraldAccent, fontSize = 18.sp)
+            },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        "${state.processedQuestions.size} questions processed in this practice run (+${state.totalXP} Total XP).",
+                        color = Slate100,
+                        fontSize = 13.sp
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("What would you like to do next?", color = Slate400, fontSize = 12.sp)
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { viewModel.continueTarget(state.processedQuestions.size + 10) },
+                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldAccent)
+                ) {
+                    Text("+10 Qs More", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.setTargetCompletedDialog(false) }) {
+                    Text("Pause & Save", color = AmberSkip)
+                }
+            }
+        )
+    }
+
+    // PERFORMANCE DASHBOARD DIALOG
+    if (state.showPerformanceDashboard) {
+        AlertDialog(
+            onDismissRequest = { viewModel.setPerformanceDashboard(false) },
+            containerColor = Slate900,
+            title = {
+                Text("Performance & Analytics", fontWeight = FontWeight.Bold, color = BlueAccent, fontSize = 18.sp)
+            },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Surface(color = Slate950, shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Text("Level ${state.level} (${state.totalXP} Total XP)", color = AmberSkip, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text("Current Streak: ${state.currentStreak} 🔥 (Best: ${state.personalBestStreak})", color = Slate100, fontSize = 12.sp)
+                            Text("Session Accuracy: ${state.sessionAccuracy}%", color = EmeraldAccent, fontSize = 12.sp)
+                            Text("Questions Processed: ${state.processedQuestions.size}", color = Slate400, fontSize = 12.sp)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.setPerformanceDashboard(false) }) {
+                    Text("Close", color = BlueAccent, fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+    }
+
+    // EXPORT DIALOG WITH MISTAKES-ONLY EXPORT
+    if (state.showExportDialog) {
+        var selectedFormat by remember { mutableStateOf("TXT") }
+        val exportContent = remember(selectedFormat, state.answers, state.startQuestion, state.totalQuestions, state.isSubmitted) {
+            when (selectedFormat) {
+                "CSV" -> viewModel.generateCsvExport()
+                "MISTAKES" -> viewModel.generateIncorrectQuestionsOnlyTxt()
+                else -> viewModel.generateTxtExport()
+            }
+        }
+
+        AlertDialog(
+            onDismissRequest = { viewModel.setExportDialog(false) },
+            containerColor = Slate900,
+            title = {
+                Text(text = "Export Answers & Mistake Decks", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Slate100)
+            },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Button(
+                            onClick = { selectedFormat = "TXT" },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = if (selectedFormat == "TXT") BlueAccent else Slate800)
+                        ) {
+                            Text("TXT", fontSize = 11.sp)
+                        }
+                        Button(
+                            onClick = { selectedFormat = "CSV" },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = if (selectedFormat == "CSV") BlueAccent else Slate800)
+                        ) {
+                            Text("CSV", fontSize = 11.sp)
+                        }
+                        if (state.isSubmitted) {
+                            Button(
+                                onClick = { selectedFormat = "MISTAKES" },
+                                modifier = Modifier.weight(1.3f),
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = if (selectedFormat == "MISTAKES") AmberSkip else Slate800)
+                            ) {
+                                Text("Mistakes TXT", fontSize = 11.sp, color = if (selectedFormat == "MISTAKES") Slate950 else AmberSkip)
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(160.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        color = Slate950,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Slate800)
+                    ) {
+                        Text(
+                            text = if (exportContent.isBlank()) "No data for this format." else exportContent,
+                            modifier = Modifier.padding(10.dp),
+                            color = Slate100,
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                            fontSize = 11.sp
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = {
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            clipboard.setPrimaryClip(ClipData.newPlainText("MCQ Export", exportContent))
+                            Toast.makeText(context, "Copied to clipboard!", Toast.LENGTH_SHORT).show()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = EmeraldAccent)
+                    ) {
+                        Text("Copy", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                    Button(
+                        onClick = {
+                            val sendIntent = Intent().apply {
+                                action = Intent.ACTION_SEND
+                                putExtra(Intent.EXTRA_TEXT, exportContent)
+                                type = "text/plain"
+                            }
+                            context.startActivity(Intent.createChooser(sendIntent, "Share MCQ Export"))
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = BlueAccent)
+                    ) {
+                        Text("Share", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.setExportDialog(false) }) {
+                    Text("Close", color = Slate400)
+                }
+            }
+        )
+    }
+
+    // RANGE & SETTINGS DIALOG
+    if (state.showSetupDialog) {
+        var startInput by remember { mutableStateOf(state.startQuestion.toString()) }
+        var totalInput by remember { mutableStateOf(state.totalQuestions.toString()) }
+        var baseTimeInput by remember { mutableStateOf(state.baseTimePerQuestion.toString()) }
+        var targetInput by remember { mutableStateOf(state.targetCount.toString()) }
+
+        AlertDialog(
+            onDismissRequest = { viewModel.setSetupDialog(false) },
+            containerColor = Slate900,
+            title = {
+                Text(text = "App & Timer Settings", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Slate100)
+            },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = baseTimeInput,
+                        onValueChange = { baseTimeInput = it },
+                        label = { Text("Base Time / Question (sec)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Slate100, unfocusedTextColor = Slate100)
+                    )
+                    OutlinedTextField(
+                        value = targetInput,
+                        onValueChange = { targetInput = it },
+                        label = { Text("Session Target (Questions)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Slate100, unfocusedTextColor = Slate100)
+                    )
+                    OutlinedTextField(
+                        value = startInput,
+                        onValueChange = { startInput = it },
+                        label = { Text("Start Question #") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Slate100, unfocusedTextColor = Slate100)
+                    )
+                    OutlinedTextField(
+                        value = totalInput,
+                        onValueChange = { totalInput = it },
+                        label = { Text("Total Questions (1-500)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Slate100, unfocusedTextColor = Slate100)
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val s = startInput.toIntOrNull() ?: 1
+                        val t = totalInput.toIntOrNull() ?: 500
+                        val b = baseTimeInput.toIntOrNull() ?: 60
+                        val tg = targetInput.toIntOrNull() ?: 10
+                        viewModel.updateRangeAndSettings(s, t, b, tg, state.soundEnabled, state.hapticEnabled)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = BlueAccent)
+                ) {
+                    Text("Save Settings")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.setSetupDialog(false) }) {
+                    Text("Cancel", color = Slate400)
+                }
+            }
+        )
+    }
+
+    // PASTE QUESTIONS DIALOG
     if (state.showImportDialog) {
         var rawInput by remember { mutableStateOf("") }
         var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -801,35 +982,14 @@ fun MCQScreen(viewModel: MCQViewModel) {
             containerColor = Slate900,
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.PostAdd, contentDescription = null, tint = AmberSkip, modifier = Modifier.size(22.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Paste Questions",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Slate100
-                    )
+                    Icon(Icons.Default.PostAdd, contentDescription = null, tint = AmberSkip, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(text = "Paste Questions", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Slate100)
                 }
             },
             text = {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 420.dp)
-                ) {
-                    Text(
-                        text = "Format: [Q1] Question: ... A: ... B: ... C: ... D: ... Correct: B Explanation: ... [/Q1]",
-                        color = Slate400,
-                        fontSize = 11.sp
-                    )
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        // Paste from clipboard
+                Column(modifier = Modifier.fillMaxWidth().heightIn(max = 380.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Button(
                             onClick = {
                                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -838,9 +998,6 @@ fun MCQScreen(viewModel: MCQViewModel) {
                                 if (text.isNotBlank()) {
                                     rawInput = text
                                     errorMessage = null
-                                    Toast.makeText(context, "Pasted from clipboard", Toast.LENGTH_SHORT).show()
-                                } else {
-                                    Toast.makeText(context, "Clipboard is empty", Toast.LENGTH_SHORT).show()
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = Slate800),
@@ -851,7 +1008,6 @@ fun MCQScreen(viewModel: MCQViewModel) {
                             Text("Paste Clipboard", fontSize = 11.sp, color = AmberSkip)
                         }
 
-                        // Load Sample
                         Button(
                             onClick = {
                                 rawInput = SAMPLE_QUESTIONS_TEMPLATE
@@ -862,7 +1018,7 @@ fun MCQScreen(viewModel: MCQViewModel) {
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                             modifier = Modifier.weight(1f)
                         ) {
-                            Text("Load Sample (3 Qs)", fontSize = 11.sp, color = Slate100)
+                            Text("Sample (3 Qs)", fontSize = 11.sp, color = Slate100)
                         }
                     }
 
@@ -874,53 +1030,30 @@ fun MCQScreen(viewModel: MCQViewModel) {
                             rawInput = it
                             errorMessage = null
                         },
-                        placeholder = {
-                            Text(
-                                "Paste your questions here in [Q1]...[/Q1] format...",
-                                fontSize = 12.sp,
-                                color = Slate400
-                            )
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = Slate100,
-                            unfocusedTextColor = Slate100,
-                            focusedBorderColor = AmberSkip,
-                            unfocusedBorderColor = Slate700,
-                            focusedContainerColor = Slate950,
-                            unfocusedContainerColor = Slate950
-                        )
+                        placeholder = { Text("Paste [Q1]...[/Q1] format...", fontSize = 12.sp, color = Slate400) },
+                        modifier = Modifier.fillMaxWidth().weight(1f),
+                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Slate100, unfocusedTextColor = Slate100)
                     )
 
                     if (errorMessage != null) {
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = errorMessage ?: "",
-                            color = RoseClear,
-                            fontSize = 11.sp
-                        )
+                        Text(text = errorMessage ?: "", color = RoseClear, fontSize = 11.sp)
                     }
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        if (rawInput.isBlank()) {
-                            errorMessage = "Please paste or enter questions in [Q1]...[/Q1] format."
-                            return@Button
-                        }
                         val success = viewModel.loadQuestionsFromText(rawInput)
                         if (success) {
-                            Toast.makeText(context, "Questions loaded successfully!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Questions loaded!", Toast.LENGTH_SHORT).show()
                         } else {
-                            errorMessage = "No valid [Q1]...[/Q1] questions found. Please check format."
+                            errorMessage = "No valid [Q1] questions found."
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = EmeraldAccent)
                 ) {
-                    Text("Load Questions", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text("Load", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -937,38 +1070,10 @@ fun MCQScreen(viewModel: MCQViewModel) {
             onDismissRequest = { viewModel.setSubmitConfirmDialog(false) },
             containerColor = Slate900,
             title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Send, contentDescription = null, tint = EmeraldAccent, modifier = Modifier.size(20.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Submit Test?", fontWeight = FontWeight.Bold, color = Slate100, fontSize = 18.sp)
-                }
+                Text("Submit Test for Evaluation?", fontWeight = FontWeight.Bold, color = Slate100, fontSize = 18.sp)
             },
             text = {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        "Are you sure you want to finish and submit your test?",
-                        color = Slate100,
-                        fontSize = 14.sp
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Surface(
-                        color = Slate950,
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.padding(10.dp)) {
-                            Text("• Total Questions: ${state.totalQuestions}", color = Slate400, fontSize = 13.sp)
-                            Text("• Answered: ${state.answeredCount}", color = EmeraldAccent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                            Text("• Unanswered: ${state.unansweredCount}", color = AmberSkip, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        "Once submitted, all correct answers and explanations will be revealed.",
-                        color = Slate400,
-                        fontSize = 12.sp
-                    )
-                }
+                Text("Are you sure? Once submitted, all answers and explanations will be revealed.", color = Slate100, fontSize = 13.sp)
             },
             confirmButton = {
                 Button(
@@ -992,68 +1097,30 @@ fun MCQScreen(viewModel: MCQViewModel) {
             onDismissRequest = { viewModel.setUnansweredDialog(false) },
             containerColor = Slate900,
             title = {
-                Text(
-                    text = "Question Grid (${state.answeredCount}/${state.totalQuestions} Answered)",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Slate100
-                )
+                Text("Question Grid (${state.answeredCount}/${state.totalQuestions})", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Slate100)
             },
             text = {
                 val qList = (state.startQuestion..state.endQuestion).toList()
                 LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = 52.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 360.dp),
+                    columns = GridCells.Adaptive(minSize = 48.dp),
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 340.dp),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     items(qList) { qNum ->
                         val ans = state.answers[qNum]
-                        val isAnswered = !ans.isNullOrBlank()
-                        val qItemInGrid = state.questions[qNum]
-
-                        val (boxBg, boxBorder, textColor) = when {
-                            state.isSubmitted && qItemInGrid != null -> {
-                                val isCorrectQ = qItemInGrid.correctAnswer.isNotBlank() && qItemInGrid.correctAnswer.equals(ans?.trim(), ignoreCase = true)
-                                if (isCorrectQ) {
-                                    Triple(EmeraldAccent.copy(alpha = 0.2f), EmeraldAccent, EmeraldAccent)
-                                } else if (isAnswered) {
-                                    Triple(RoseClear.copy(alpha = 0.2f), RoseClear, RoseClear)
-                                } else {
-                                    Triple(AmberSkip.copy(alpha = 0.15f), AmberSkip.copy(alpha = 0.4f), AmberSkip)
-                                }
-                            }
-                            isAnswered -> Triple(BlueSelected.copy(alpha = 0.25f), BlueAccent, BlueAccent)
-                            else -> Triple(Slate800, Slate700, Slate400)
-                        }
+                        val isAns = !ans.isNullOrBlank()
 
                         Box(
                             modifier = Modifier
-                                .size(48.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(boxBg)
-                                .border(1.dp, boxBorder, RoundedCornerShape(10.dp))
+                                .size(44.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (isAns) BlueSelected.copy(alpha = 0.25f) else Slate800)
+                                .border(1.dp, if (isAns) BlueAccent else Slate700, RoundedCornerShape(8.dp))
                                 .clickable { viewModel.jumpTo(qNum) },
                             contentAlignment = Alignment.Center
                         ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(
-                                    text = qNum.toString(),
-                                    color = textColor,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                if (isAnswered) {
-                                    Text(
-                                        text = ans ?: "",
-                                        color = textColor,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Black
-                                    )
-                                }
-                            }
+                            Text(text = qNum.toString(), color = if (isAns) BlueAccent else Slate400, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -1066,198 +1133,13 @@ fun MCQScreen(viewModel: MCQViewModel) {
         )
     }
 
-    // EXPORT DIALOG
-    if (state.showExportDialog) {
-        var selectedFormat by remember { mutableStateOf("TXT") }
-        val exportContent = remember(selectedFormat, state.answers, state.startQuestion, state.totalQuestions) {
-            if (selectedFormat == "TXT") viewModel.generateTxtExport() else viewModel.generateCsvExport()
-        }
-
-        AlertDialog(
-            onDismissRequest = { viewModel.setExportDialog(false) },
-            containerColor = Slate900,
-            title = {
-                Text(
-                    text = "Export Answers",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Slate100
-                )
-            },
-            text = {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Button(
-                            onClick = { selectedFormat = "TXT" },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (selectedFormat == "TXT") BlueAccent else Slate800
-                            )
-                        ) {
-                            Text("TXT Format")
-                        }
-                        Button(
-                            onClick = { selectedFormat = "CSV" },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (selectedFormat == "CSV") BlueAccent else Slate800
-                            )
-                        ) {
-                            Text("CSV Format")
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Text(
-                        text = if (selectedFormat == "TXT") "Standard 1-A format (easy to paste to ChatGPT):" else "CSV format for Excel / Google Sheets:",
-                        color = Slate400,
-                        fontSize = 12.sp
-                    )
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(160.dp),
-                        shape = RoundedCornerShape(10.dp),
-                        color = Slate950,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Slate800)
-                    ) {
-                        Text(
-                            text = exportContent,
-                            modifier = Modifier.padding(10.dp),
-                            color = Slate100,
-                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                            fontSize = 12.sp
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(
-                        onClick = {
-                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            clipboard.setPrimaryClip(ClipData.newPlainText("MCQ Answers", exportContent))
-                            Toast.makeText(context, "Copied to clipboard!", Toast.LENGTH_SHORT).show()
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = EmeraldAccent)
-                    ) {
-                        Text("Copy", color = Color.White, fontWeight = FontWeight.Bold)
-                    }
-                    Button(
-                        onClick = {
-                            val sendIntent = Intent().apply {
-                                action = Intent.ACTION_SEND
-                                putExtra(Intent.EXTRA_TEXT, exportContent)
-                                type = "text/plain"
-                            }
-                            context.startActivity(Intent.createChooser(sendIntent, "Share MCQ Answers"))
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = BlueAccent)
-                    ) {
-                        Text("Share", color = Color.White, fontWeight = FontWeight.Bold)
-                    }
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { viewModel.setExportDialog(false) }) {
-                    Text("Close", color = Slate400)
-                }
-            }
-        )
-    }
-
-    // RANGE SETUP DIALOG
-    if (state.showSetupDialog) {
-        var startInput by remember { mutableStateOf(state.startQuestion.toString()) }
-        var totalInput by remember { mutableStateOf(state.totalQuestions.toString()) }
-
-        AlertDialog(
-            onDismissRequest = { viewModel.setSetupDialog(false) },
-            containerColor = Slate900,
-            title = {
-                Text(
-                    text = "Question Range Setup",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Slate100
-                )
-            },
-            text = {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    OutlinedTextField(
-                        value = startInput,
-                        onValueChange = { startInput = it },
-                        label = { Text("Start Question Number") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = Slate100,
-                            unfocusedTextColor = Slate100,
-                            focusedBorderColor = BlueAccent,
-                            unfocusedBorderColor = Slate700
-                        )
-                    )
-                    OutlinedTextField(
-                        value = totalInput,
-                        onValueChange = { totalInput = it },
-                        label = { Text("Total Number of Questions (1 - 500)") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = Slate100,
-                            unfocusedTextColor = Slate100,
-                            focusedBorderColor = BlueAccent,
-                            unfocusedBorderColor = Slate700
-                        )
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val s = startInput.toIntOrNull() ?: 1
-                        val t = totalInput.toIntOrNull() ?: 500
-                        viewModel.updateRange(s, t, 4)
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = BlueAccent)
-                ) {
-                    Text("Apply Range")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { viewModel.setSetupDialog(false) }) {
-                    Text("Cancel", color = Slate400)
-                }
-            }
-        )
-    }
-
     // CLEAR ALL CONFIRMATION DIALOG
     if (state.showClearAllDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.setClearAllDialog(false) },
             containerColor = Slate900,
-            title = {
-                Text("Clear All Answers?", fontWeight = FontWeight.Bold, color = RoseClear)
-            },
-            text = {
-                Text(
-                    "This will delete all saved answers (${state.answeredCount} answered questions) and reset to question ${state.startQuestion}. This cannot be undone.",
-                    color = Slate100
-                )
-            },
+            title = { Text("Clear All Answers?", fontWeight = FontWeight.Bold, color = RoseClear) },
+            text = { Text("This will reset all answers, timings, and progress. This cannot be undone.", color = Slate100) },
             confirmButton = {
                 Button(
                     onClick = { viewModel.clearAllAnswers() },
@@ -1275,5 +1157,4 @@ fun MCQScreen(viewModel: MCQViewModel) {
     }
 }
 
-// Simple Quadruple helper data class
 data class Quadruple<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)

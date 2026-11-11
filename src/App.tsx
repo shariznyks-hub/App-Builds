@@ -11,6 +11,9 @@ import { ClearConfirmModal } from './components/ClearConfirmModal';
 import { AndroidInstallModal } from './components/AndroidInstallModal';
 import { ImportQuestionsModal } from './components/ImportQuestionsModal';
 import { SubmitConfirmModal } from './components/SubmitConfirmModal';
+import { TargetCompletedModal } from './components/TargetCompletedModal';
+import { PerformanceDashboardModal } from './components/PerformanceDashboardModal';
+import { CelebrationEffects } from './components/CelebrationEffects';
 import { ActiveModal } from './types';
 
 export default function App() {
@@ -20,10 +23,23 @@ export default function App() {
     endQuestion,
     currentQuestion,
     answers,
+    questions,
     currentQuestionItem,
     isSubmitted,
     stats,
     evaluation,
+    timeBankStats,
+    isTimerPaused,
+    toggleTimerPause,
+    targetState,
+    updateTargetCount,
+    continueWithNewTarget,
+    dismissTargetModal,
+    gamification,
+    analytics,
+    settings,
+    updateSettings,
+    hasUnfinishedSession,
     answerCurrent,
     skipCurrent,
     goToNext,
@@ -39,10 +55,29 @@ export default function App() {
 
   const { isInstallable, install } = usePWAInstall();
   const [activeModal, setActiveModal] = useState<ActiveModal>('none');
+  const [resumeBannerDismissed, setResumeBannerDismissed] = useState<boolean>(false);
+
+  // Auto trigger target modal when target is reached
+  const showTargetCompleted = targetState.isCompleted && !targetState.dismissed;
+
+  const handleResumeSession = () => {
+    setResumeBannerDismissed(true);
+  };
+
+  const handleStartFreshSession = () => {
+    setActiveModal('clearConfirm');
+  };
 
   return (
     <div className="h-screen w-screen flex flex-col bg-slate-950 text-slate-100 overflow-hidden font-sans">
-      {/* Header with Title, Quick Actions, Counters & Post-Submission Evaluation Banner */}
+      {/* Visual Celebration Overlays (Target reached, streak milestone) */}
+      <CelebrationEffects
+        trigger={showTargetCompleted}
+        title="🎯 Session Target Completed!"
+        subtitle={`${targetState.processedQuestions.length} Questions Processed (+${gamification.sessionXP} XP)`}
+      />
+
+      {/* Header with Title, Quick Actions, Adaptive Time Bank & Goals */}
       <Header
         currentQuestion={currentQuestion}
         startQuestion={startQuestion}
@@ -53,11 +88,20 @@ export default function App() {
         currentAnswer={stats.currentAnswer}
         isSubmitted={isSubmitted}
         evaluation={evaluation}
+        timeBankStats={timeBankStats}
+        isTimerPaused={isTimerPaused}
+        onToggleTimerPause={toggleTimerPause}
+        targetCount={targetState.targetCount}
+        processedCount={targetState.processedQuestions.length}
+        gamification={gamification}
         onOpenModal={setActiveModal}
         onSubmitTest={() => setActiveModal('submitConfirm')}
         onRetakeTest={retakeTest}
         isPWAInstallable={isInstallable}
         onInstallPWA={install}
+        hasUnfinishedSession={hasUnfinishedSession && !resumeBannerDismissed}
+        onResumeSession={handleResumeSession}
+        onStartFreshSession={handleStartFreshSession}
       />
 
       {/* Primary MCQ Area (Question Text, Options A-D, Evaluation Highlighting & Explanations) */}
@@ -88,6 +132,46 @@ export default function App() {
         onJumpTo={jumpToQuestion}
       />
 
+      {/* Target Completed Dialog */}
+      {showTargetCompleted && (
+        <TargetCompletedModal
+          processedCount={targetState.processedQuestions.length}
+          answeredCount={stats.answeredCount}
+          targetCount={targetState.targetCount}
+          sessionXP={gamification.sessionXP}
+          currentStreak={gamification.currentStreak}
+          timeBankBalance={timeBankStats.globalBankBalance}
+          onContinueWithNewTarget={(newTarget) => continueWithNewTarget(newTarget)}
+          onPauseAndSave={() => {
+            if (!isTimerPaused) toggleTimerPause();
+            dismissTargetModal();
+          }}
+          onEndSession={() => {
+            if (!isTimerPaused) toggleTimerPause();
+            dismissTargetModal();
+          }}
+        />
+      )}
+
+      {/* Performance & Learning Analytics Dashboard */}
+      {activeModal === 'performanceDashboard' && (
+        <PerformanceDashboardModal
+          gamification={gamification}
+          analytics={analytics}
+          currentSessionStats={{
+            answeredCount: stats.answeredCount,
+            unansweredCount: stats.unansweredCount,
+            totalQuestions: totalQuestions,
+          }}
+          evaluationScore={{
+            correct: evaluation.correct,
+            incorrect: evaluation.incorrect,
+          }}
+          processedCount={targetState.processedQuestions.length}
+          onClose={() => setActiveModal('none')}
+        />
+      )}
+
       {/* Modals & Dialogs */}
       {activeModal === 'unanswered' && (
         <UnansweredModal
@@ -102,6 +186,8 @@ export default function App() {
           startQuestion={startQuestion}
           endQuestion={endQuestion}
           answers={answers}
+          questions={questions}
+          isSubmitted={isSubmitted}
           onClose={() => setActiveModal('none')}
         />
       )}
@@ -110,7 +196,11 @@ export default function App() {
         <SetupModal
           currentStart={startQuestion}
           currentTotal={totalQuestions}
+          settings={settings}
+          currentTargetCount={targetState.targetCount}
           onSave={updateRange}
+          onSaveSettings={updateSettings}
+          onSaveTarget={updateTargetCount}
           onClose={() => setActiveModal('none')}
         />
       )}
