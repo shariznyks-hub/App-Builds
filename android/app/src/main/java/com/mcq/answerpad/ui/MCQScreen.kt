@@ -4,10 +4,13 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.media.AudioManager
+import android.media.ToneGenerator
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -33,6 +36,80 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mcq.answerpad.MCQViewModel
 import com.mcq.answerpad.ui.theme.*
+
+object AndroidEffects {
+    private var toneGen: ToneGenerator? = null
+
+    init {
+        try {
+            toneGen = ToneGenerator(AudioManager.STREAM_MUSIC, 70)
+        } catch (_: Exception) {}
+    }
+
+    fun playClick(context: Context, sound: Boolean, haptic: Boolean) {
+        if (sound) {
+            try { toneGen?.startTone(ToneGenerator.TONE_PROP_BEEP, 35) } catch (_: Exception) {}
+        }
+        if (haptic) triggerVibration(context, 20)
+    }
+
+    fun playSelect(context: Context, sound: Boolean, haptic: Boolean) {
+        if (sound) {
+            try { toneGen?.startTone(ToneGenerator.TONE_PROP_ACK, 45) } catch (_: Exception) {}
+        }
+        if (haptic) triggerVibration(context, 35)
+    }
+
+    fun playMilestone(context: Context, sound: Boolean, haptic: Boolean) {
+        if (sound) {
+            try { toneGen?.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 120) } catch (_: Exception) {}
+        }
+        if (haptic) triggerVibrationPattern(context, longArrayOf(0, 40, 50, 40))
+    }
+
+    fun playVictory(context: Context, sound: Boolean, haptic: Boolean) {
+        if (sound) {
+            try { toneGen?.startTone(ToneGenerator.TONE_CDMA_CONFIRM, 180) } catch (_: Exception) {}
+        }
+        if (haptic) triggerVibrationPattern(context, longArrayOf(0, 50, 60, 90))
+    }
+
+    @Suppress("DEPRECATION")
+    private fun triggerVibration(context: Context, ms: Long) {
+        try {
+            val vibrator = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                val vm = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? android.os.VibratorManager
+                vm?.defaultVibrator
+            } else {
+                context.getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator
+            }
+
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                vibrator?.vibrate(android.os.VibrationEffect.createOneShot(ms, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                vibrator?.vibrate(ms)
+            }
+        } catch (_: Exception) {}
+    }
+
+    @Suppress("DEPRECATION")
+    private fun triggerVibrationPattern(context: Context, pattern: LongArray) {
+        try {
+            val vibrator = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                val vm = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? android.os.VibratorManager
+                vm?.defaultVibrator
+            } else {
+                context.getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator
+            }
+
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                vibrator?.vibrate(android.os.VibrationEffect.createWaveform(pattern, -1))
+            } else {
+                vibrator?.vibrate(pattern, -1)
+            }
+        } catch (_: Exception) {}
+    }
+}
 
 private const val SAMPLE_QUESTIONS_TEMPLATE = """[Q1]
 Question: Under GFR, which of the following is classified as an Original Work?
@@ -511,6 +588,7 @@ fun MCQScreen(viewModel: MCQViewModel) {
                     Button(
                         onClick = {
                             if (!state.isSubmitted) {
+                                AndroidEffects.playSelect(context, state.soundEnabled, state.hapticEnabled)
                                 viewModel.answerCurrent(opt)
                             }
                         },
@@ -637,7 +715,10 @@ fun MCQScreen(viewModel: MCQViewModel) {
             if (!state.isSubmitted) {
                 Spacer(modifier = Modifier.height(6.dp))
                 Button(
-                    onClick = { viewModel.skipCurrent() },
+                    onClick = {
+                        AndroidEffects.playClick(context, state.soundEnabled, state.hapticEnabled)
+                        viewModel.skipCurrent()
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(44.dp),
@@ -671,7 +752,10 @@ fun MCQScreen(viewModel: MCQViewModel) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Button(
-                    onClick = { viewModel.previousQuestion() },
+                    onClick = {
+                        AndroidEffects.playClick(context, state.soundEnabled, state.hapticEnabled)
+                        viewModel.previousQuestion()
+                    },
                     enabled = state.currentQuestion > state.startQuestion,
                     modifier = Modifier
                         .weight(1f)
@@ -688,7 +772,10 @@ fun MCQScreen(viewModel: MCQViewModel) {
 
                 if (!state.isSubmitted) {
                     Button(
-                        onClick = { viewModel.clearCurrentAnswer() },
+                        onClick = {
+                            AndroidEffects.playClick(context, state.soundEnabled, state.hapticEnabled)
+                            viewModel.clearCurrentAnswer()
+                        },
                         enabled = !state.currentAnswer.isNullOrBlank(),
                         modifier = Modifier
                             .weight(1.1f)
@@ -702,7 +789,10 @@ fun MCQScreen(viewModel: MCQViewModel) {
                     }
                 } else {
                     Button(
-                        onClick = { viewModel.setUnansweredDialog(true) },
+                        onClick = {
+                            AndroidEffects.playClick(context, state.soundEnabled, state.hapticEnabled)
+                            viewModel.setUnansweredDialog(true)
+                        },
                         modifier = Modifier
                             .weight(1.1f)
                             .height(42.dp),
@@ -716,7 +806,10 @@ fun MCQScreen(viewModel: MCQViewModel) {
                 }
 
                 Button(
-                    onClick = { viewModel.nextQuestion() },
+                    onClick = {
+                        AndroidEffects.playClick(context, state.soundEnabled, state.hapticEnabled)
+                        viewModel.nextQuestion()
+                    },
                     enabled = state.currentQuestion < state.endQuestion,
                     modifier = Modifier
                         .weight(1f)
@@ -776,16 +869,115 @@ fun MCQScreen(viewModel: MCQViewModel) {
             onDismissRequest = { viewModel.setPerformanceDashboard(false) },
             containerColor = Slate900,
             title = {
-                Text("Performance & Analytics", fontWeight = FontWeight.Bold, color = BlueAccent, fontSize = 18.sp)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.EmojiEvents, contentDescription = null, tint = AmberSkip, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Performance & Analytics", fontWeight = FontWeight.Bold, color = BlueAccent, fontSize = 17.sp)
+                }
             },
             text = {
-                Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                val totalSpent = state.questionTimings.values.sum()
+                val avgSec = if (state.visitedQuestions.isNotEmpty()) totalSpent / state.visitedQuestions.size else 0
+                val xpInCurrentLevel = state.totalXP % 100
+                val progressFloat = (xpInCurrentLevel / 100f).coerceIn(0f, 1f)
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 480.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Level & XP Progress Card
                     Surface(color = Slate950, shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.padding(10.dp)) {
-                            Text("Level ${state.level} (${state.totalXP} Total XP)", color = AmberSkip, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            Text("Current Streak: ${state.currentStreak} 🔥 (Best: ${state.personalBestStreak})", color = Slate100, fontSize = 12.sp)
-                            Text("Session Accuracy: ${state.sessionAccuracy}%", color = EmeraldAccent, fontSize = 12.sp)
-                            Text("Questions Processed: ${state.processedQuestions.size}", color = Slate400, fontSize = 12.sp)
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Level ${state.level}", color = AmberSkip, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                Text("${state.totalXP} Total XP", color = Slate400, fontSize = 12.sp)
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            LinearProgressIndicator(
+                                progress = { progressFloat },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(6.dp)
+                                    .clip(RoundedCornerShape(3.dp)),
+                                color = AmberSkip,
+                                trackColor = Slate800
+                            )
+                            Spacer(modifier = Modifier.height(3.dp))
+                            Text("$xpInCurrentLevel / 100 XP to Level ${state.level + 1}", color = Slate400, fontSize = 10.sp)
+                        }
+                    }
+
+                    // Streaks & Accuracy
+                    Surface(color = Slate950, shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("Streak & Accuracy", color = Slate100, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Current Streak:", color = Slate400, fontSize = 12.sp)
+                                Text("${state.currentStreak} 🔥 (Best: ${state.personalBestStreak})", color = AmberSkip, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            }
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Accuracy:", color = Slate400, fontSize = 12.sp)
+                                Text("${state.sessionAccuracy}%", color = EmeraldAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            }
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Score Breakdown:", color = Slate400, fontSize = 12.sp)
+                                Text("${state.correctCount} Correct / ${state.incorrectCount} Wrong", color = Slate100, fontSize = 12.sp)
+                            }
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Questions Processed:", color = Slate400, fontSize = 12.sp)
+                                Text("${state.processedQuestions.size} / ${state.totalQuestions}", color = Slate100, fontSize = 12.sp)
+                            }
+                        }
+                    }
+
+                    // Time & Pacing
+                    Surface(color = Slate950, shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("Pacing & Time Bank", color = Slate100, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Avg Time / Question:", color = Slate400, fontSize = 12.sp)
+                                Text("${avgSec}s", color = Slate100, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            }
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Bank Balance:", color = Slate400, fontSize = 12.sp)
+                                val bankColor = if (state.globalBankBalance >= 0) EmeraldAccent else RoseClear
+                                Text(formatBank(state.globalBankBalance), color = bankColor, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            }
+                        }
+                    }
+
+                    // Achievements Shelf
+                    Surface(color = Slate950, shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text("Achievements", color = Slate100, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            val ach1 = state.processedQuestions.isNotEmpty()
+                            val ach2 = state.currentStreak >= 10 || state.personalBestStreak >= 10
+                            val ach3 = state.globalBankBalance > 0
+                            val ach4 = state.sessionAccuracy >= 80 && state.answeredCount >= 5
+
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(if (ach1) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked, contentDescription = null, tint = if (ach1) EmeraldAccent else Slate600, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("First Step: Processed first question", fontSize = 11.sp, color = if (ach1) Slate100 else Slate500)
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(if (ach2) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked, contentDescription = null, tint = if (ach2) EmeraldAccent else Slate600, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Streak Pioneer: Reached a 10+ question streak", fontSize = 11.sp, color = if (ach2) Slate100 else Slate500)
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(if (ach3) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked, contentDescription = null, tint = if (ach3) EmeraldAccent else Slate600, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Time Master: Positive time bank reserve", fontSize = 11.sp, color = if (ach3) Slate100 else Slate500)
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(if (ach4) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked, contentDescription = null, tint = if (ach4) EmeraldAccent else Slate600, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Sharp Shooter: 80%+ accuracy", fontSize = 11.sp, color = if (ach4) Slate100 else Slate500)
+                            }
                         }
                     }
                 }
@@ -798,14 +990,14 @@ fun MCQScreen(viewModel: MCQViewModel) {
         )
     }
 
-    // EXPORT DIALOG WITH MISTAKES-ONLY EXPORT
+    // EXPORT DIALOG WITH MISTAKES-ONLY EXPORT & SCROLLABLE PREVIEW
     if (state.showExportDialog) {
-        var selectedFormat by remember { mutableStateOf("TXT") }
-        val exportContent = remember(selectedFormat, state.answers, state.startQuestion, state.totalQuestions, state.isSubmitted) {
+        var selectedFormat by remember { mutableStateOf("CSV") }
+        val exportContent = remember(selectedFormat, state.answers, state.startQuestion, state.totalQuestions, state.isSubmitted, state.questions) {
             when (selectedFormat) {
-                "CSV" -> viewModel.generateCsvExport()
+                "CSV" -> viewModel.generateCsvExport(includeEvaluation = true)
                 "MISTAKES" -> viewModel.generateIncorrectQuestionsOnlyTxt()
-                else -> viewModel.generateTxtExport()
+                else -> viewModel.generateTxtExport(includeEvaluation = true)
             }
         }
 
@@ -813,56 +1005,77 @@ fun MCQScreen(viewModel: MCQViewModel) {
             onDismissRequest = { viewModel.setExportDialog(false) },
             containerColor = Slate900,
             title = {
-                Text(text = "Export Answers & Mistake Decks", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Slate100)
+                Text(text = "Export Answers & Evaluation", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Slate100)
             },
             text = {
                 Column(modifier = Modifier.fillMaxWidth()) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Button(
-                            onClick = { selectedFormat = "TXT" },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = if (selectedFormat == "TXT") BlueAccent else Slate800)
-                        ) {
-                            Text("TXT", fontSize = 11.sp)
-                        }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         Button(
                             onClick = { selectedFormat = "CSV" },
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier.weight(1.1f),
                             shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = if (selectedFormat == "CSV") BlueAccent else Slate800)
                         ) {
-                            Text("CSV", fontSize = 11.sp)
+                            Text("CSV (Detailed)", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
-                        if (state.isSubmitted) {
-                            Button(
-                                onClick = { selectedFormat = "MISTAKES" },
-                                modifier = Modifier.weight(1.3f),
-                                shape = RoundedCornerShape(8.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = if (selectedFormat == "MISTAKES") AmberSkip else Slate800)
-                            ) {
-                                Text("Mistakes TXT", fontSize = 11.sp, color = if (selectedFormat == "MISTAKES") Slate950 else AmberSkip)
-                            }
+                        Button(
+                            onClick = { selectedFormat = "TXT" },
+                            modifier = Modifier.weight(0.9f),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = if (selectedFormat == "TXT") BlueAccent else Slate800)
+                        ) {
+                            Text("TXT", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                        Button(
+                            onClick = { selectedFormat = "MISTAKES" },
+                            modifier = Modifier.weight(1.2f),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = if (selectedFormat == "MISTAKES") AmberSkip else Slate800)
+                        ) {
+                            Text("Mistakes TXT", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (selectedFormat == "MISTAKES") Slate950 else AmberSkip)
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Text(
+                        text = when (selectedFormat) {
+                            "CSV" -> "Includes: Question, Selected Answer, Correct Answer, Result, Explanation"
+                            "MISTAKES" -> "Mistakes-only questions formatted in [Q1]...[/Q1] format for re-import"
+                            else -> "Text summary with question responses and answer keys"
+                        },
+                        fontSize = 10.sp,
+                        color = AmberSkip,
+                        lineHeight = 13.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(6.dp))
 
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(160.dp),
+                            .height(180.dp),
                         shape = RoundedCornerShape(10.dp),
                         color = Slate950,
                         border = androidx.compose.foundation.BorderStroke(1.dp, Slate800)
                     ) {
-                        Text(
-                            text = if (exportContent.isBlank()) "No data for this format." else exportContent,
-                            modifier = Modifier.padding(10.dp),
-                            color = Slate100,
-                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                            fontSize = 11.sp
-                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState())
+                                .horizontalScroll(rememberScrollState())
+                                .padding(10.dp)
+                        ) {
+                            Text(
+                                text = if (exportContent.isBlank()) "No data available for this format." else exportContent,
+                                color = Slate100,
+                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                fontSize = 11.sp
+                            )
+                        }
                     }
                 }
             },
@@ -901,12 +1114,14 @@ fun MCQScreen(viewModel: MCQViewModel) {
         )
     }
 
-    // RANGE & SETTINGS DIALOG
+    // RANGE & SETTINGS DIALOG (SCROLLABLE WITH SOUND & HAPTIC SWITCHES)
     if (state.showSetupDialog) {
         var startInput by remember { mutableStateOf(state.startQuestion.toString()) }
         var totalInput by remember { mutableStateOf(state.totalQuestions.toString()) }
         var baseTimeInput by remember { mutableStateOf(state.baseTimePerQuestion.toString()) }
         var targetInput by remember { mutableStateOf(state.targetCount.toString()) }
+        var soundInput by remember { mutableStateOf(state.soundEnabled) }
+        var hapticInput by remember { mutableStateOf(state.hapticEnabled) }
 
         AlertDialog(
             onDismissRequest = { viewModel.setSetupDialog(false) },
@@ -915,7 +1130,55 @@ fun MCQScreen(viewModel: MCQViewModel) {
                 Text(text = "App & Timer Settings", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Slate100)
             },
             text = {
-                Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 440.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    // Sound Switch
+                    Surface(color = Slate950, shape = RoundedCornerShape(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Sound Effects", color = Slate100, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                Text("Audio feedback on tap & milestones", color = Slate400, fontSize = 10.sp)
+                            }
+                            Switch(
+                                checked = soundInput,
+                                onCheckedChange = { soundInput = it },
+                                colors = SwitchDefaults.colors(checkedThumbColor = EmeraldAccent, checkedTrackColor = Slate800)
+                            )
+                        }
+                    }
+
+                    // Haptic Switch
+                    Surface(color = Slate950, shape = RoundedCornerShape(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Haptic Feedback", color = Slate100, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                Text("Vibration on button taps & answers", color = Slate400, fontSize = 10.sp)
+                            }
+                            Switch(
+                                checked = hapticInput,
+                                onCheckedChange = { hapticInput = it },
+                                colors = SwitchDefaults.colors(checkedThumbColor = EmeraldAccent, checkedTrackColor = Slate800)
+                            )
+                        }
+                    }
+
                     OutlinedTextField(
                         value = baseTimeInput,
                         onValueChange = { baseTimeInput = it },
@@ -957,7 +1220,7 @@ fun MCQScreen(viewModel: MCQViewModel) {
                         val t = totalInput.toIntOrNull() ?: 500
                         val b = baseTimeInput.toIntOrNull() ?: 60
                         val tg = targetInput.toIntOrNull() ?: 10
-                        viewModel.updateRangeAndSettings(s, t, b, tg, state.soundEnabled, state.hapticEnabled)
+                        viewModel.updateRangeAndSettings(s, t, b, tg, soundInput, hapticInput)
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = BlueAccent)
                 ) {
